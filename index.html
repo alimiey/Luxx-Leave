@@ -49,7 +49,7 @@ const fmt = s => s.split('-').reverse().join('/');
 const addDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const isWork = s => S.cal[s] ? S.cal[s] === 'op' : new Date(s + 'T00:00:00Z').getUTCDay() !== 5;
 const cnt = (a, b) => { let n = 0; for (let d = a; d <= b; d = addDay(d, 1)) if (isWork(d)) n++; return n; };
-let S = {scr:'in', mode:'in', msg:'', p:null, bal:[], reqs:[], cal:{}, tab:'a', cmsg:''};
+let S = {scr:'in', mode:'in', msg:'', p:null, bal:[], reqs:[], cal:{}, tab:'a', cmsg:'', cm:today().slice(0, 7), day:null, cn:{}};
 let setPw = /type=(invite|recovery)/.test(location.hash);
 
 function toast(t) { const e = $('toast'); e.textContent = t; e.className = 'on'; clearTimeout(toast.t); toast.t = setTimeout(() => e.className = '', 2800); }
@@ -71,11 +71,11 @@ async function load() {
     SB.from('leave_requests').select('*').eq('user_id', p.id).order('created_at', {ascending:false}),
     SB.from('calendar_days').select('*')]);
   S.bal = b.data || []; S.reqs = r.data || []; S.cal = {};
-  (c.data || []).forEach(x => S.cal[x.day] = x.status);
+  S.cn = {}; (c.data || []).forEach(x => { S.cal[x.day] = x.status; S.cn[x.day] = x.note; });
   if (['hr', 'boss', 'acc'].includes(p.role)) {
     const y = +today().slice(0, 4);
-    const [a, q, l, v] = await Promise.all([SB.from('profiles').select('*').order('employee_id'), SB.from('leave_requests').select('*').order('created_at', {ascending:false}), SB.from('leave_allocations').select('*'), SB.from('v_balances').select('*').eq('year', y)]);
-    S.all = {pf:a.data || [], rq:q.data || [], al:l.data || [], bal:v.data || []};
+    const [a, q, l, v, au] = await Promise.all([SB.from('profiles').select('*').order('employee_id'), SB.from('leave_requests').select('*').order('created_at', {ascending:false}), SB.from('leave_allocations').select('*'), SB.from('v_balances').select('*').eq('year', y), SB.from('audit_log').select('*').order('at', {ascending:false}).limit(100)]);
+    S.all = {pf:a.data || [], rq:q.data || [], al:l.data || [], bal:v.data || [], au:au.data || []};
   }
   if (!S.view) { S.view = p.role === 'staf' ? 'me' : 'w'; S.tab = p.role === 'hr' ? 'i' : p.role === 'boss' ? 'k' : p.role === 'acc' ? 'b' : 'a'; }
   S.scr = 'app'; render();
@@ -152,8 +152,8 @@ function appView() { const p = S.p; return (p.role === 'boss' || (p.role !== 'st
 function workView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';S.sel=null;render()">${l}</button>`;
   const top = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)} · ${p.role === 'hr' ? 'HR' : p.role === 'boss' ? 'Lady Boss' : 'Akaun/Admin'}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>` + (p.role !== 'boss' ? `<button class="btn ghost" style="margin-top:8px" onclick="S.view='me';S.tab='a';render()">Cuti saya</button>` : '');
-  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') : tb('k', 'Kelulusan');
-  return top + `<div class="tabs">${tabs}</div>` + (S.tab === 'b' ? teamView() : S.tab === 'r' ? '<div class="mut">Baca sahaja.</div>' + S.all.rq.map(r => wreq(r)).join('') : S.tab === 'i' ? hrInbox() : bossView());
+  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') + tb('t', 'Takwim') + tb('u', 'Audit') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') + tb('u', 'Audit') : tb('k', 'Kelulusan') + tb('u', 'Audit');
+  return top + `<div class="tabs">${tabs}</div>` + (S.tab === 'b' ? teamView() : S.tab === 't' ? takwimView() : S.tab === 'u' ? auditView() : S.tab === 'r' ? '<div class="mut">Baca sahaja.</div>' + S.all.rq.map(r => wreq(r)).join('') : S.tab === 'i' ? hrInbox() : bossView());
 }
 const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
 function wreq(r, x = '') {
@@ -203,6 +203,50 @@ async function saveEnt(uid) {
     if (error) return toast(k + ': ' + error.message);
   }
   toast('Entitlement dikemas kini'); await load();
+}
+
+/* ===== Takwim dan Audit ===== */
+function mon(n) { const [y, m] = S.cm.split('-').map(Number); S.cm = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); S.day = null; render(); }
+function takwimView() {
+  const [y, m] = S.cm.split('-').map(Number), f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), dn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let c = ''; for (let i = 0; i < f; i++) c += '<span></span>';
+  for (let d = 1; d <= dn; d++) { const k = S.cm + '-' + String(d).padStart(2, '0'), w = isWork(k);
+    c += `<button onclick="S.day='${k}';render()" style="padding:8px 0;border-radius:8px;border:${S.day === k ? '2px solid var(--acc)' : '1px solid var(--line)'};font:inherit;cursor:pointer;background:${w ? 'var(--soft)' : 'var(--bad)'};color:${w ? 'var(--acc)' : 'var(--bad-i)'}">${d}${S.cn[k] ? '*' : ''}</button>`; }
+  const ov = Object.keys(S.cal).filter(k => k.startsWith(S.cm)).sort();
+  return `<div class="row" style="align-items:center"><button class="btn ghost" onclick="mon(-1)">Sebelum</button><b>${String(m).padStart(2, '0')}/${y}</b><button class="btn ghost" onclick="mon(1)">Seterusnya</button></div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;text-align:center" class="mut">${['Ahd', 'Isn', 'Sel', 'Rab', 'Kha', 'Jum', 'Sab'].map(x => '<span>' + x + '</span>').join('')}${c}</div>
+  <div class="mut" style="margin-top:8px">Hijau = operasi, merah = tidak operasi. Lalai: Jumaat tidak operasi. Bertanda * = ada nota. Tekan tarikh untuk ubah.</div>` +
+  (S.day ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">sekarang: ${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><label>Nota (contoh: nama cuti umum)</label><input id="tn" value="${esc(S.cn[S.day] || '')}"><div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setDay('off')">Tidak operasi</button><button class="btn" onclick="setDay('op')">Operasi</button><button class="btn ghost" style="margin-top:10px" onclick="setDay(null)">Ikut lalai</button></div></div>` : '') +
+  `<div class="card"><b>Tambah julat tarikh</b><div class="mut">Untuk cuti perayaan atau kilang tutup beberapa hari sekali gus.</div><div class="grid"><div><label>Dari</label><input type="date" id="rf"></div><div><label>Hingga</label><input type="date" id="rt"></div></div><label>Status</label><select id="rs"><option value="off">Tidak operasi</option><option value="op">Operasi</option><option value="">Ikut lalai (padam pengecualian)</option></select><label>Nota</label><input id="rn" placeholder="contoh: Cuti Hari Raya Aidilfitri"><button class="btn" onclick="setRange()">Simpan julat</button></div>` + '<h2>Pengecualian bulan ini</h2>' + (ov.length ? ov.map(k => `<div class="card row"><span>${fmt(k)} · ${S.cal[k] === 'op' ? 'Operasi' : 'Tidak operasi'}</span><span class="mut">${esc(S.cn[k] || '')}</span></div>`).join('') : '<div class="empty">Tiada pengecualian.</div>');
+}
+async function setDay(st) {
+  const { data, error } = await SB.rpc('set_calendar_day', {p_day:S.day, p_status:st, p_note:$('tn').value.trim() || null});
+  if (error) return toast(error.message);
+  toast(data > 0 ? data + ' permohonan terjejas, semak semula' : 'Takwim dikemas kini'); await load();
+}
+async function setRange() {
+  const f = $('rf').value, t = $('rt').value, st = $('rs').value || null, note = $('rn').value.trim() || null;
+  if (!f || !t) return toast('Pilih tarikh dari dan hingga');
+  if (t < f) return toast('Tarikh hingga mesti selepas tarikh dari');
+  const n = Math.round((new Date(t) - new Date(f)) / 864e5) + 1;
+  if (n > 63) return toast('Maksimum 63 hari sekali gus');
+  if (!confirm('Tetapkan ' + n + ' hari (' + fmt(f) + ' hingga ' + fmt(t) + ') sebagai ' + (st === 'off' ? 'tidak operasi' : st === 'op' ? 'operasi' : 'ikut lalai') + '?')) return;
+  const { data, error } = await SB.rpc('set_calendar_range', {p_from:f, p_to:t, p_status:st, p_note:note});
+  if (error) return toast(error.message);
+  S.cm = f.slice(0, 7); S.day = null;
+  toast(data > 0 ? data + ' permohonan terjejas, semak semula' : 'Julat dikemas kini'); await load();
+}
+const ACT = {hantar_permohonan:'Hantar permohonan', hr_hantar_kepada_boss:'HR hantar kepada Lady Boss', lulus:'Lulus', tolak:'Tolak', ubah_entitlement:'Ubah entitlement', ubah_takwim:'Ubah takwim'};
+function auText(a) {
+  const d = a.detail || {};
+  if (a.action === 'ubah_entitlement') { const o = d.sebelum || {}, n = d.selepas || {};
+    return nm(d.staf) + ' · ' + d.jenis + ' ' + d.tahun + ': asas ' + (o.base ?? 0) + '→' + n.base + ', B/F ' + (o.bf ?? 0) + '→' + n.bf + ', anugerah ' + (o.award ?? 0) + '→' + n.award + ', ganti ' + (o.swap ?? 0) + '→' + n.swap + '. Sebab: ' + d.sebab + (d.akaun_sendiri ? ' [AKAUN SENDIRI]' : ''); }
+  if (a.action === 'ubah_takwim') return (d.dari ? fmt(d.dari) + ' hingga ' + fmt(d.hingga) : fmt(d.tarikh)) + ' → ' + (d.status === 'op' ? 'operasi' : d.status === 'off' ? 'tidak operasi' : 'lalai') + (d.terjejas ? ' (' + d.terjejas + ' permohonan terjejas)' : '');
+  if (a.action === 'hr_hantar_kepada_boss') return 'Permohonan #' + d.request + ' · ' + Object.entries(d.pecahan || {}).map(([k, v]) => v + ' ' + k).join(' + ');
+  return 'Permohonan #' + d.request + (d.terus_ke_boss ? ' (terus ke Lady Boss)' : '') + (d.sebab ? '. Sebab: ' + d.sebab : '');
+}
+function auditView() {
+  return S.all.au.length ? S.all.au.map(a => `<div class="card"><div class="row"><b>${esc(nm(a.actor))}</b><span class="mut">${new Date(a.at).toLocaleString('ms-MY', {timeZone:'Asia/Kuala_Lumpur', dateStyle:'short', timeStyle:'short'})}</span></div><span class="tag">${esc(ACT[a.action] || a.action)}</span><div class="mut" style="margin-top:6px">${esc(auText(a))}</div></div>`).join('') : '<div class="empty">Belum ada tindakan direkod.</div>';
 }
 
 function calc() {
