@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LUXX Leave</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#17212b;--mut:#66727f;--line:#dde3e9;--acc:#0e6b66;--acc-t:#fff;--soft:#e3f1f0;--warn:#fff3d6;--warn-i:#7a5600;--bad:#fde7e5;--bad-i:#a02a21;--ok:#e1f4e6;--ok-i:#1d6b34}
+@media(prefers-color-scheme:dark){:root{--bg:#10161c;--card:#19212a;--ink:#e8edf2;--mut:#93a0ad;--line:#2b3641;--acc:#3fb8b0;--acc-t:#062624;--soft:#173331;--warn:#3a2e10;--warn-i:#f1c96a;--bad:#3b1d1b;--bad-i:#f2a39c;--ok:#16301f;--ok-i:#8fd9a5}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:720px;margin:0 auto;padding:0 14px 40px}
+h1{font-size:22px;margin:16px 0 8px}h2{font-size:16px;margin:20px 0 8px}
+.tabs{display:flex;gap:16px;border-bottom:1px solid var(--line);margin:10px 0 12px;overflow-x:auto;white-space:nowrap}
+.tabs button{border:0;background:none;color:var(--mut);padding:8px 0;font:inherit;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--acc);border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bal b{font-size:22px}.bal span{color:var(--mut);font-size:13px;display:block}
+.bal i{display:block;height:5px;background:var(--line);border-radius:3px;margin-top:6px}.bal i u{display:block;height:100%;background:var(--acc);border-radius:3px}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.mut{color:var(--mut);font-size:13px}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--soft);color:var(--acc);white-space:nowrap}
+.tag.hr{background:var(--warn);color:var(--warn-i)}.tag.approved{background:var(--ok);color:var(--ok-i)}.tag.rejected{background:var(--bad);color:var(--bad-i)}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 3px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.btn{border:0;background:var(--acc);color:var(--acc-t);padding:10px 14px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;margin-top:10px}
+.btn.ghost{background:var(--line);color:var(--ink);margin:0}.btn:disabled{opacity:.45;cursor:not-allowed}
+.note{padding:8px 10px;border-radius:8px;font-size:13px;margin-top:8px}
+.note.w{background:var(--warn);color:var(--warn-i)}.note.e{background:var(--bad);color:var(--bad-i)}.note.o{background:var(--ok);color:var(--ok-i)}
+.empty{text-align:center;color:var(--mut);padding:22px 0}
+a{color:var(--acc)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<main><div id="app"><div class="empty">Memuatkan...</div></div></main>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB = supabase.createClient('https://sbdcjehrldfsmsbetaab.supabase.co', 'sb_publishable_9FB90rfbg6Kf-SgVFqlGJw_PsLrGCgh');
+const T = {AL:'Annual Leave', MC:'Medical Leave', EL:'Emergency Leave', UP:'Unpaid Leave'};
+const ST = {hr:'Menunggu HR', boss:'Menunggu Lady Boss', approved:'Diluluskan', rejected:'Ditolak'};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
+const fmt = s => s.split('-').reverse().join('/');
+const addDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const isWork = s => S.cal[s] ? S.cal[s] === 'op' : new Date(s + 'T00:00:00Z').getUTCDay() !== 5;
+const cnt = (a, b) => { let n = 0; for (let d = a; d <= b; d = addDay(d, 1)) if (isWork(d)) n++; return n; };
+let S = {scr:'in', mode:'in', msg:'', p:null, bal:[], reqs:[], cal:{}, tab:'a', cmsg:''};
+let setPw = /type=(invite|recovery)/.test(location.hash);
+
+function toast(t) { const e = $('toast'); e.textContent = t; e.className = 'on'; clearTimeout(toast.t); toast.t = setTimeout(() => e.className = '', 2800); }
+function go(m) { S.mode = m; S.msg = ''; render(); }
+
+SB.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY' || (setPw && ev === 'SIGNED_IN')) { S.scr = 'setpw'; render(); } });
+(async () => {
+  const { data: { session } } = await SB.auth.getSession();
+  if (session && !setPw) await load(); else render();
+})();
+
+async function load() {
+  const { data: { user } } = await SB.auth.getUser();
+  const { data: p } = await SB.from('profiles').select('*').eq('id', user.id).single();
+  if (!p || !p.active) { await SB.auth.signOut(); S.scr = 'in'; S.msg = 'Akaun tidak aktif atau profil tiada. Hubungi HR.'; return render(); }
+  S.p = p;
+  const [b, r, c] = await Promise.all([
+    SB.from('v_balances').select('*').eq('user_id', p.id).eq('year', +today().slice(0, 4)),
+    SB.from('leave_requests').select('*').eq('user_id', p.id).order('created_at', {ascending:false}),
+    SB.from('calendar_days').select('*')]);
+  S.bal = b.data || []; S.reqs = r.data || []; S.cal = {};
+  (c.data || []).forEach(x => S.cal[x.day] = x.status);
+  S.scr = 'app'; render();
+}
+
+async function doLogin() {
+  const id = $('li').value.trim().toUpperCase(), pw = $('lp') ? $('lp').value : '';
+  if (!id) { S.msg = 'Masukkan Employee ID.'; return render(); }
+  const { data: email } = await SB.rpc('email_for_employee', {p_eid: id});
+  if (S.mode === 'forgot') {
+    if (email) await SB.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    toast('Jika ID wujud, pautan reset dihantar ke e-mel berdaftar'); return go('in');
+  }
+  if (!email || !pw) { S.msg = 'Employee ID atau kata laluan tidak betul.'; return render(); }
+  const { error } = await SB.auth.signInWithPassword({email, password: pw});
+  if (error) { S.msg = 'Employee ID atau kata laluan tidak betul.'; return render(); }
+  await load();
+}
+async function savePw() {
+  const p1 = $('np').value;
+  if (p1.length < 8) { S.msg = 'Kata laluan minimum 8 aksara.'; return render(); }
+  const { error } = await SB.auth.updateUser({password: p1});
+  if (error) { S.msg = error.message; return render(); }
+  setPw = false; history.replaceState(null, '', location.pathname); toast('Kata laluan disimpan'); await load();
+}
+async function logout() { await SB.auth.signOut(); S.scr = 'in'; S.mode = 'in'; render(); }
+
+function loginView() {
+  const m = S.mode;
+  return `<h1>LUXX Leave</h1><div class="card"><h2 style="margin-top:0">${m === 'in' ? 'Log masuk' : 'Lupa kata laluan'}</h2>
+  <label>Employee ID</label><input id="li" autocapitalize="characters" autocomplete="username">
+  ${m === 'in' ? '<label>Kata laluan</label><input id="lp" type="password" autocomplete="current-password">' : ''}
+  ${S.msg ? `<div class="note e">${esc(S.msg)}</div>` : ''}
+  <button class="btn" onclick="doLogin()">${m === 'in' ? 'Log masuk' : 'Hantar pautan reset'}</button>
+  <div style="margin-top:12px"><a href="#" onclick="go('${m === 'in' ? 'forgot' : 'in'}');return false">${m === 'in' ? 'Lupa kata laluan' : 'Kembali'}</a></div></div>
+  <div class="mut">Akaun baharu: ikut pautan aktivasi dalam e-mel yang dihantar HR.</div>`;
+}
+function setPwView() {
+  return `<h1>LUXX Leave</h1><div class="card"><h2 style="margin-top:0">Tetapkan kata laluan</h2><label>Kata laluan baharu (minimum 8 aksara)</label><input id="np" type="password" autocomplete="new-password">${S.msg ? `<div class="note e">${esc(S.msg)}</div>` : ''}<button class="btn" onclick="savePw()">Simpan</button></div>`;
+}
+
+const tag = s => `<span class="tag ${s}">${ST[s]}</span>`;
+function reqCard(r) {
+  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}</div>`;
+}
+function appView() {
+  const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
+  const head = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>
+  <div class="tabs">${tb('a', 'Dashboard')}${p.role === 'boss' ? '' : tb('m', 'Mohon cuti') + tb('h', 'Sejarah')}</div>`;
+  if (p.role === 'boss') return head + '<div class="card">Skrin kelulusan Lady Boss akan ditambah dalam Bahagian 2.</div>';
+  const note = p.role !== 'staf' ? '<div class="note w">Menu ' + (p.role === 'hr' ? 'HR' : 'semakan') + ' akan ditambah dalam Bahagian 2. Buat masa ini anda boleh mohon cuti sendiri.</div>' : '';
+  if (S.tab === 'a') {
+    const bm = Object.fromEntries(S.bal.map(b => [b.ltype, b]));
+    const cards = Object.keys(T).map(k => { const b = bm[k], tot = b ? +b.base + +b.bf + +b.award + +b.swap : 0, bl = b ? +b.balance : 0;
+      return `<div class="card bal"><span>${T[k]}</span><b>${k} ${bl}/${tot}</b><i><u style="width:${tot ? Math.max(0, bl / tot * 100) : 0}%"></u></i></div>`; }).join('');
+    const al = bm.AL, brk = al ? `<div class="mut">AL: asas ${al.base} + B/F ${al.bf} + anugerah ${al.award} + ganti ${al.swap} − guna ${al.used}</div>` : '<div class="note w">Entitlement tahun ini belum diisi. Hubungi HR.</div>';
+    const ap = S.reqs.filter(r => r.status === 'approved' && r.end_date >= today());
+    return head + note + `<div class="grid">${cards}</div>${brk}<h2>Cuti diluluskan akan datang</h2>` + (ap.length ? ap.map(reqCard).join('') : '<div class="empty">Tiada cuti diluluskan akan datang.</div>');
+  }
+  if (S.tab === 'm') return head + `<div class="card"><label>Jenis cuti</label><select id="ft" onchange="calc()">${Object.keys(T).map(k => `<option value="${k}">${k} – ${T[k]}</option>`).join('')}</select>
+  <label>Tarikh mula</label><input type="date" id="fs" onchange="calc()"><label>Tarikh tamat</label><input type="date" id="fe" onchange="calc()">
+  <label>Sebab</label><textarea id="fw" rows="2" oninput="calc()"></textarea>
+  <label id="fl">Lampiran sokongan (pilihan)</label><input type="file" id="ff" accept=".pdf,.jpg,.jpeg,.png" onchange="calc()">
+  <div id="prev"></div><button class="btn" id="sub" onclick="submitReq()" disabled>Hantar permohonan</button></div>
+  <div class="mut">Hari kerja ikut takwim kilang. Notis AL 5 hari bekerja. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
+  return head + (S.reqs.length ? S.reqs.map(reqCard).join('') : '<div class="empty">Tiada permohonan lagi.</div>');
+}
+
+function calc() {
+  const t = $('ft').value, s = $('fs').value, e = $('fe').value, f = $('ff').files[0];
+  const okFile = !!f && /^(application\/pdf|image\/(jpeg|png))$/.test(f.type) && f.size <= 5e6;
+  $('fl').textContent = t === 'MC' ? 'Lampiran MC (wajib)' : 'Lampiran sokongan (pilihan)';
+  let h = '', ok = true;
+  if (!s || !e) ok = false;
+  else if (e < s) { ok = false; h += '<div class="note e">Tarikh tamat mesti selepas atau sama dengan tarikh mula.</div>'; }
+  else { const d = cnt(s, e); if (!d) { ok = false; h += '<div class="note e">Semua tarikh dipilih adalah hari tidak operasi.</div>'; } else h += `<div class="note o">Jumlah dikira: <b>${d} hari bekerja</b></div>`; }
+  if (f && !okFile) { ok = false; h += '<div class="note e">Fail mesti PDF, JPG atau PNG, maksimum 5MB.</div>'; }
+  if (t === 'MC' && !f) { ok = false; h += '<div class="note w">Lampirkan dokumen MC.</div>'; }
+  if (ok && !$('fw').value.trim()) { ok = false; h += '<div class="note w">Tulis sebab ringkas.</div>'; }
+  $('prev').innerHTML = h + (S.cmsg ? `<div class="note e">${esc(S.cmsg)}</div>` : ''); $('sub').disabled = !ok;
+}
+async function submitReq() {
+  $('sub').disabled = true; S.cmsg = '';
+  const f = $('ff').files[0]; let path = null;
+  const fail = m => { S.cmsg = m; calc(); };
+  if (f) {
+    path = S.p.id + '/' + Date.now() + '-' + f.name.replace(/[^\w.\-]/g, '_');
+    const u = await SB.storage.from('mc-attachments').upload(path, f);
+    if (u.error) return fail('Gagal muat naik lampiran: ' + u.error.message);
+  }
+  const { error } = await SB.rpc('submit_leave', {p_type:$('ft').value, p_start:$('fs').value, p_end:$('fe').value, p_reason:$('fw').value.trim(), p_att:path});
+  if (error) return fail(error.message);
+  toast('Permohonan dihantar'); S.tab = 'h'; await load();
+}
+
+function render() { $('app').innerHTML = S.scr === 'setpw' ? setPwView() : S.scr === 'app' ? appView() : loginView(); if (S.scr === 'app' && S.tab === 'm') calc(); }
+</script>
+</body>
+</html>
