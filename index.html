@@ -124,9 +124,10 @@ function reqCard(r) {
 function staffView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
   const head = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>
-  <div class="tabs">${tb('a', 'Dashboard')}${p.role === 'boss' ? '' : tb('m', 'Mohon cuti') + tb('h', 'Sejarah')}</div>`;
+  <div class="tabs">${tb('a', 'Dashboard')}${p.role === 'boss' ? '' : tb('m', 'Mohon cuti') + tb('h', 'Sejarah') + tb('t', 'Takwim')}</div>`;
   if (p.role === 'boss') return head + '<div class="card">Skrin kelulusan Lady Boss akan ditambah dalam Bahagian 2.</div>';
   const note = p.role !== 'staf' ? '<button class="btn ghost" onclick="S.view=\'w\';S.tab=\'' + (p.role === 'hr' ? 'i' : 'b') + '\';render()">Kembali ke menu ' + (p.role === 'hr' ? 'HR' : 'Semakan') + '</button>' : '';
+  if (S.tab === 't') return head + note + takwimView();
   if (S.tab === 'a') {
     const bm = Object.fromEntries(S.bal.map(b => [b.ltype, b]));
     const cards = Object.keys(T).map(k => { const b = bm[k], tot = b ? +b.base + +b.bf + +b.award + +b.swap : 0, bl = b ? +b.balance : 0;
@@ -140,7 +141,7 @@ function staffView() {
   <label>Sebab</label><textarea id="fw" rows="2" oninput="calc()"></textarea>
   <label id="fl">Lampiran sokongan (pilihan)</label><input type="file" id="ff" accept=".pdf,.jpg,.jpeg,.png" onchange="calc()">
   <div id="prev"></div><button class="btn" id="sub" onclick="submitReq()" disabled>Hantar permohonan</button></div>
-  <div class="mut">Hari kerja ikut takwim kilang. Notis AL 5 hari bekerja. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
+  <div class="mut">Hari kerja ikut <a href="#" onclick="S.tab='t';render();return false">takwim kilang</a>. Notis AL 5 hari bekerja. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
   return head + (S.reqs.length ? S.reqs.map(reqCard).join('') : '<div class="empty">Tiada permohonan lagi.</div>');
 }
 
@@ -152,7 +153,7 @@ function appView() { const p = S.p; return (p.role === 'boss' || (p.role !== 'st
 function workView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';S.sel=null;render()">${l}</button>`;
   const top = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)} · ${p.role === 'hr' ? 'HR' : p.role === 'boss' ? 'Lady Boss' : 'Akaun/Admin'}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>` + (p.role !== 'boss' ? `<button class="btn ghost" style="margin-top:8px" onclick="S.view='me';S.tab='a';render()">Cuti saya</button>` : '');
-  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') + tb('t', 'Takwim') + tb('u', 'Audit') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') + tb('u', 'Audit') : tb('k', 'Kelulusan') + tb('u', 'Audit');
+  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') + tb('t', 'Takwim') + tb('u', 'Audit') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') + tb('t', 'Takwim') + tb('u', 'Audit') : tb('k', 'Kelulusan') + tb('t', 'Takwim') + tb('u', 'Audit');
   return top + `<div class="tabs">${tabs}</div>` + (S.tab === 'b' ? teamView() : S.tab === 't' ? takwimView() : S.tab === 'u' ? auditView() : S.tab === 'r' ? '<div class="mut">Baca sahaja.</div>' + S.all.rq.map(r => wreq(r)).join('') : S.tab === 'i' ? hrInbox() : bossView());
 }
 const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
@@ -208,6 +209,7 @@ async function saveEnt(uid) {
 /* ===== Takwim dan Audit ===== */
 function mon(n) { const [y, m] = S.cm.split('-').map(Number); S.cm = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); S.day = null; render(); }
 function takwimView() {
+  const canEdit = S.p.role === 'hr' && S.view === 'w';
   const [y, m] = S.cm.split('-').map(Number), f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), dn = new Date(Date.UTC(y, m, 0)).getUTCDate();
   let c = ''; for (let i = 0; i < f; i++) c += '<span></span>';
   for (let d = 1; d <= dn; d++) { const k = S.cm + '-' + String(d).padStart(2, '0'), w = isWork(k);
@@ -215,9 +217,9 @@ function takwimView() {
   const ov = Object.keys(S.cal).filter(k => k.startsWith(S.cm)).sort();
   return `<div class="row" style="align-items:center"><button class="btn ghost" onclick="mon(-1)">Sebelum</button><b>${String(m).padStart(2, '0')}/${y}</b><button class="btn ghost" onclick="mon(1)">Seterusnya</button></div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;text-align:center" class="mut">${['Ahd', 'Isn', 'Sel', 'Rab', 'Kha', 'Jum', 'Sab'].map(x => '<span>' + x + '</span>').join('')}${c}</div>
-  <div class="mut" style="margin-top:8px">Hijau = operasi, merah = tidak operasi. Lalai: Jumaat tidak operasi. Bertanda * = ada nota. Tekan tarikh untuk ubah.</div>` +
-  (S.day ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">sekarang: ${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><label>Nota (contoh: nama cuti umum)</label><input id="tn" value="${esc(S.cn[S.day] || '')}"><div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setDay('off')">Tidak operasi</button><button class="btn" onclick="setDay('op')">Operasi</button><button class="btn ghost" style="margin-top:10px" onclick="setDay(null)">Ikut lalai</button></div></div>` : '') +
-  `<div class="card"><b>Tambah julat tarikh</b><div class="mut">Untuk cuti perayaan atau kilang tutup beberapa hari sekali gus.</div><div class="grid"><div><label>Dari</label><input type="date" id="rf"></div><div><label>Hingga</label><input type="date" id="rt"></div></div><label>Status</label><select id="rs"><option value="off">Tidak operasi</option><option value="op">Operasi</option><option value="">Ikut lalai (padam pengecualian)</option></select><label>Nota</label><input id="rn" placeholder="contoh: Cuti Hari Raya Aidilfitri"><button class="btn" onclick="setRange()">Simpan julat</button></div>` + '<h2>Pengecualian bulan ini</h2>' + (ov.length ? ov.map(k => `<div class="card row"><span>${fmt(k)} · ${S.cal[k] === 'op' ? 'Operasi' : 'Tidak operasi'}</span><span class="mut">${esc(S.cn[k] || '')}</span></div>`).join('') : '<div class="empty">Tiada pengecualian.</div>');
+  <div class="mut" style="margin-top:8px">Hijau = operasi, merah = tidak operasi. Lalai: Jumaat tidak operasi. Bertanda * = ada nota. ${canEdit ? 'Tekan tarikh untuk ubah.' : 'Tekan tarikh untuk lihat nota.'}</div>` +
+  (S.day && !canEdit ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><div style="margin-top:6px">${esc(S.cn[S.day] || 'Tiada nota untuk tarikh ini.')}</div></div>` : S.day ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">sekarang: ${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><label>Nota (contoh: nama cuti umum)</label><input id="tn" value="${esc(S.cn[S.day] || '')}"><div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setDay('off')">Tidak operasi</button><button class="btn" onclick="setDay('op')">Operasi</button><button class="btn ghost" style="margin-top:10px" onclick="setDay(null)">Ikut lalai</button></div></div>` : '') +
+  (canEdit ? `<div class="card"><b>Tambah julat tarikh</b><div class="mut">Untuk cuti perayaan atau kilang tutup beberapa hari sekali gus.</div><div class="grid"><div><label>Dari</label><input type="date" id="rf"></div><div><label>Hingga</label><input type="date" id="rt"></div></div><label>Status</label><select id="rs"><option value="off">Tidak operasi</option><option value="op">Operasi</option><option value="">Ikut lalai (padam pengecualian)</option></select><label>Nota</label><input id="rn" placeholder="contoh: Cuti Hari Raya Aidilfitri"><button class="btn" onclick="setRange()">Simpan julat</button></div>` : '') + '<h2>Pengecualian bulan ini</h2>' + (ov.length ? ov.map(k => `<div class="card row"><span>${fmt(k)} · ${S.cal[k] === 'op' ? 'Operasi' : 'Tidak operasi'}</span><span class="mut">${esc(S.cn[k] || '')}</span></div>`).join('') : '<div class="empty">Tiada pengecualian.</div>');
 }
 async function setDay(st) {
   const { data, error } = await SB.rpc('set_calendar_day', {p_day:S.day, p_status:st, p_note:$('tn').value.trim() || null});
