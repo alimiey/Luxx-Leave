@@ -72,6 +72,12 @@ async function load() {
     SB.from('calendar_days').select('*')]);
   S.bal = b.data || []; S.reqs = r.data || []; S.cal = {};
   (c.data || []).forEach(x => S.cal[x.day] = x.status);
+  if (['hr', 'boss', 'acc'].includes(p.role)) {
+    const y = +today().slice(0, 4);
+    const [a, q, l, v] = await Promise.all([SB.from('profiles').select('*').order('employee_id'), SB.from('leave_requests').select('*').order('created_at', {ascending:false}), SB.from('leave_allocations').select('*'), SB.from('v_balances').select('*').eq('year', y)]);
+    S.all = {pf:a.data || [], rq:q.data || [], al:l.data || [], bal:v.data || []};
+  }
+  if (!S.view) { S.view = p.role === 'staf' ? 'me' : 'w'; S.tab = p.role === 'hr' ? 'i' : p.role === 'boss' ? 'k' : p.role === 'acc' ? 'b' : 'a'; }
   S.scr = 'app'; render();
 }
 
@@ -85,7 +91,7 @@ async function doLogin() {
   }
   if (!email || !pw) { S.msg = 'Employee ID atau kata laluan tidak betul.'; return render(); }
   const { error } = await SB.auth.signInWithPassword({email, password: pw});
-  if (error) { S.msg = 'Employee ID atau kata laluan tidak betul.'; return render(); }
+  if (error) { S.msg = /confirm/i.test(error.message) ? 'E-mel akaun belum disahkan. Hubungi HR.' : 'Employee ID atau kata laluan tidak betul.'; return render(); }
   await load();
 }
 async function savePw() {
@@ -95,7 +101,7 @@ async function savePw() {
   if (error) { S.msg = error.message; return render(); }
   setPw = false; history.replaceState(null, '', location.pathname); toast('Kata laluan disimpan'); await load();
 }
-async function logout() { await SB.auth.signOut(); S.scr = 'in'; S.mode = 'in'; render(); }
+async function logout() { await SB.auth.signOut(); S.scr = 'in'; S.mode = 'in'; S.view = null; S.sel = null; render(); }
 
 function loginView() {
   const m = S.mode;
@@ -115,12 +121,12 @@ const tag = s => `<span class="tag ${s}">${ST[s]}</span>`;
 function reqCard(r) {
   return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}</div>`;
 }
-function appView() {
+function staffView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
   const head = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>
   <div class="tabs">${tb('a', 'Dashboard')}${p.role === 'boss' ? '' : tb('m', 'Mohon cuti') + tb('h', 'Sejarah')}</div>`;
   if (p.role === 'boss') return head + '<div class="card">Skrin kelulusan Lady Boss akan ditambah dalam Bahagian 2.</div>';
-  const note = p.role !== 'staf' ? '<div class="note w">Menu ' + (p.role === 'hr' ? 'HR' : 'semakan') + ' akan ditambah dalam Bahagian 2. Buat masa ini anda boleh mohon cuti sendiri.</div>' : '';
+  const note = p.role !== 'staf' ? '<button class="btn ghost" onclick="S.view=\'w\';S.tab=\'' + (p.role === 'hr' ? 'i' : 'b') + '\';render()">Kembali ke menu ' + (p.role === 'hr' ? 'HR' : 'Semakan') + '</button>' : '';
   if (S.tab === 'a') {
     const bm = Object.fromEntries(S.bal.map(b => [b.ltype, b]));
     const cards = Object.keys(T).map(k => { const b = bm[k], tot = b ? +b.base + +b.bf + +b.award + +b.swap : 0, bl = b ? +b.balance : 0;
@@ -136,6 +142,67 @@ function appView() {
   <div id="prev"></div><button class="btn" id="sub" onclick="submitReq()" disabled>Hantar permohonan</button></div>
   <div class="mut">Hari kerja ikut takwim kilang. Notis AL 5 hari bekerja. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
   return head + (S.reqs.length ? S.reqs.map(reqCard).join('') : '<div class="empty">Tiada permohonan lagi.</div>');
+}
+
+/* ===== Bahagian 2: HR, Lady Boss, Akaun/Admin ===== */
+const nm = id => (S.all.pf.find(x => x.id === id) || {}).full_name || '?';
+const balOf = (u, k) => +(S.all.bal.find(b => b.user_id === u && b.ltype === k) || {balance:0}).balance;
+const tot = b => b ? +b.base + +b.bf + +b.award + +b.swap : 0;
+function appView() { const p = S.p; return (p.role === 'boss' || (p.role !== 'staf' && S.view !== 'me')) ? workView() : staffView(); }
+function workView() {
+  const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';S.sel=null;render()">${l}</button>`;
+  const top = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)} · ${p.role === 'hr' ? 'HR' : p.role === 'boss' ? 'Lady Boss' : 'Akaun/Admin'}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>` + (p.role !== 'boss' ? `<button class="btn ghost" style="margin-top:8px" onclick="S.view='me';S.tab='a';render()">Cuti saya</button>` : '');
+  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') : tb('k', 'Kelulusan');
+  return top + `<div class="tabs">${tabs}</div>` + (S.tab === 'b' ? teamView() : S.tab === 'r' ? '<div class="mut">Baca sahaja.</div>' + S.all.rq.map(r => wreq(r)).join('') : S.tab === 'i' ? hrInbox() : bossView());
+}
+const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
+function wreq(r, x = '') {
+  const sp = spl(r);
+  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${x}</div>`;
+}
+async function openAtt(path) { const { data, error } = await SB.storage.from('mc-attachments').createSignedUrl(path, 60); if (error) return toast(error.message); window.open(data.signedUrl, '_blank'); }
+function sug(r) { const e = Math.min(r.days, Math.max(0, balOf(r.user_id, 'EL'))); return r.ltype === 'EL' ? {EL:e, AL:r.days - e} : {[r.ltype]:+r.days}; }
+function hrInbox() {
+  const q = S.all.rq.filter(r => r.status === 'hr' && r.user_id !== S.p.id);
+  return `<h2 style="margin-top:0">Menunggu semakan (${q.length})</h2>` + (q.length ? q.map(r => { const s = sug(r);
+    return wreq(r, `<div class="grid" style="grid-template-columns:repeat(4,1fr)">${Object.keys(T).map(k => `<div><label>${k} <span class="mut">(${balOf(r.user_id, k)})</span></label><input type="number" min="0" step="0.5" id="sp${r.id}${k}" value="${s[k] || 0}" oninput="chk(${r.id})"></div>`).join('')}</div><div id="sw${r.id}"></div><button class="btn" id="sb${r.id}" onclick="toBoss(${r.id})">Hantar kepada Lady Boss</button>`); }).join('') : '<div class="empty">Tiada permohonan menunggu.</div>');
+}
+function split(id) { const o = {}; Object.keys(T).forEach(k => { const v = +$('sp' + id + k).value || 0; if (v > 0) o[k] = v; }); return o; }
+function chk(id) {
+  const r = S.all.rq.find(x => x.id === id), o = split(id), s = Object.values(o).reduce((a, b) => a + b, 0); let m = '';
+  Object.entries(o).forEach(([k, v]) => { if (v > balOf(r.user_id, k)) m += 'Baki ' + k + ' tidak cukup. '; });
+  if (s !== +r.days) m += 'Jumlah mesti ' + r.days + ' hari (kini ' + s + ').';
+  $('sw' + id).innerHTML = m ? `<div class="note e">${m}</div>` : ''; $('sb' + id).disabled = !!m;
+}
+async function toBoss(id) { const { error } = await SB.rpc('hr_send_to_boss', {p_id:id, p_alloc:split(id)}); if (error) return toast(error.message); toast('Dihantar kepada Lady Boss'); await load(); }
+function bossView() {
+  const q = S.all.rq.filter(r => r.status === 'boss'), d = S.all.rq.filter(r => r.status === 'approved' || r.status === 'rejected').slice(0, 10);
+  return `<h2 style="margin-top:0">Untuk kelulusan (${q.length})</h2>` + (q.length ? q.map(r => wreq(r, `<label>Sebab (wajib jika tolak)</label><input id="rj${r.id}"><div class="row" style="justify-content:flex-start"><button class="btn" onclick="decide(${r.id},true)">Luluskan</button><button class="btn" style="background:var(--bad);color:var(--bad-i)" onclick="decide(${r.id},false)">Tolak</button></div>`)).join('') : '<div class="empty">Tiada permohonan menunggu.</div>') + '<h2>Keputusan terkini</h2>' + d.map(r => wreq(r)).join('');
+}
+async function decide(id, ok) { const { error } = await SB.rpc('boss_decide', {p_id:id, p_approve:ok, p_reason:$('rj' + id).value.trim() || null}); if (error) return toast(error.message); toast(ok ? 'Diluluskan' : 'Ditolak'); await load(); }
+function teamView() {
+  if (S.sel) return detail(S.all.pf.find(x => x.id === S.sel));
+  return '<div class="mut">Tekan nama untuk butiran.</div>' + S.all.pf.filter(u => u.role !== 'boss').map(u => `<div class="card" style="cursor:pointer" onclick="S.sel='${u.id}';render()"><div class="row"><div><b>${esc(u.full_name)}</b><br><span class="mut">${esc(u.employee_id)} · ${esc(u.department || '')}</span></div><div class="mut">${Object.keys(T).map(k => k + ' ' + balOf(u.id, k)).join(' · ')}</div></div></div>`).join('');
+}
+function detail(u) {
+  const bo = (k) => S.all.bal.find(x => x.user_id === u.id && x.ltype === k), f = (k, c, l) => `<div><label>${l}</label><input type="number" step="0.5" id="en${k}${c}" value="${(bo(k) || {})[c] || 0}"></div>`;
+  const al = bo('AL');
+  return `<button class="btn ghost" onclick="S.sel=null;render()">Kembali</button><h2>${esc(u.full_name)} <span class="mut">${esc(u.employee_id)}</span></h2><div class="grid">${Object.keys(T).map(k => `<div class="card bal"><span>${T[k]}</span><b>${k} ${balOf(u.id, k)}/${tot(bo(k))}</b></div>`).join('')}</div>` +
+    (al ? `<div class="mut">AL: asas ${al.base} + B/F ${al.bf} + anugerah ${al.award} + ganti ${al.swap} − guna ${al.used}</div>` : '') +
+    (S.p.role === 'hr' ? `<div class="card"><b>Entitlement ${today().slice(0, 4)} (HR sahaja)</b>${u.id === S.p.id ? '<div class="note w">Ini akaun anda sendiri. Perubahan ditanda dalam audit.</div>' : ''}<h2 style="margin:10px 0 0">AL</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${f('AL', 'base', 'Asas')}${f('AL', 'bf', 'B/F (maks 10)')}${f('AL', 'award', 'Anugerah +/-')}${f('AL', 'swap', 'Ganti')}</div><div class="grid" style="grid-template-columns:repeat(3,1fr)">${['MC', 'EL', 'UP'].map(k => f(k, 'base', k + ' asas')).join('')}</div><label>Sebab (wajib)</label><input id="enr"><button class="btn" onclick="saveEnt('${u.id}')">Simpan entitlement</button></div>` : '') +
+    '<h2>Sejarah</h2>' + (S.all.rq.filter(r => r.user_id === u.id).map(r => wreq(r)).join('') || '<div class="empty">Tiada rekod.</div>');
+}
+async function saveEnt(uid) {
+  const why = $('enr').value.trim(); if (!why) return toast('Sebab wajib diisi');
+  const y = +today().slice(0, 4), cs = ['base', 'bf', 'award', 'swap'];
+  for (const k of Object.keys(T)) {
+    const o = S.all.bal.find(x => x.user_id === uid && x.ltype === k) || {base:0, bf:0, award:0, swap:0};
+    const n = {}; cs.forEach(c => n[c] = $('en' + k + c) ? +$('en' + k + c).value || 0 : 0);
+    if (cs.every(c => +o[c] === n[c])) continue;
+    const { error } = await SB.rpc('hr_set_entitlement', {p_user:uid, p_year:y, p_type:k, p_base:n.base, p_bf:n.bf, p_award:n.award, p_swap:n.swap, p_reason:why});
+    if (error) return toast(k + ': ' + error.message);
+  }
+  toast('Entitlement dikemas kini'); await load();
 }
 
 function calc() {
@@ -165,7 +232,7 @@ async function submitReq() {
   toast('Permohonan dihantar'); S.tab = 'h'; await load();
 }
 
-function render() { $('app').innerHTML = S.scr === 'setpw' ? setPwView() : S.scr === 'app' ? appView() : loginView(); if (S.scr === 'app' && S.tab === 'm') calc(); }
+function render() { $('app').innerHTML = S.scr === 'setpw' ? setPwView() : S.scr === 'app' ? appView() : loginView(); if (S.scr === 'app' && S.tab === 'm') calc(); if (S.scr === 'app' && S.p.role === 'hr' && S.view === 'w' && S.tab === 'i') S.all.rq.filter(r => r.status === 'hr' && r.user_id !== S.p.id).forEach(r => chk(r.id)); }
 </script>
 </body>
 </html>
