@@ -46,6 +46,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
 const fmt = s => s.split('-').reverse().join('/');
+const hf = r => r.half === 'AM' ? ' (pagi)' : r.half === 'PM' ? ' (petang)' : '';
 const addDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const isWork = s => S.cal[s] ? S.cal[s] === 'op' : new Date(s + 'T00:00:00Z').getUTCDay() !== 5;
 const cnt = (a, b) => { let n = 0; for (let d = a; d <= b; d = addDay(d, 1)) if (isWork(d)) n++; return n; };
@@ -119,7 +120,7 @@ function setPwView() {
 
 const tag = s => `<span class="tag ${s}">${ST[s]}</span>`;
 function reqCard(r) {
-  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}</div>`;
+  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}</div>`;
 }
 function staffView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
@@ -137,11 +138,11 @@ function staffView() {
     return head + note + `<div class="grid">${cards}</div>${brk}<h2>Cuti diluluskan akan datang</h2>` + (ap.length ? ap.map(reqCard).join('') : '<div class="empty">Tiada cuti diluluskan akan datang.</div>');
   }
   if (S.tab === 'm') return head + `<div class="card"><label>Jenis cuti</label><select id="ft" onchange="calc()">${Object.keys(T).map(k => `<option value="${k}">${k} – ${T[k]}</option>`).join('')}</select>
-  <label>Tarikh mula</label><input type="date" id="fs" onchange="calc()"><label>Tarikh tamat</label><input type="date" id="fe" onchange="calc()">
+  <div id="hw" style="display:none"><label>Tempoh</label><select id="fh" onchange="calc()"><option value="">Sehari penuh atau lebih</option><option value="AM">Separuh hari (pagi)</option><option value="PM">Separuh hari (petang)</option></select></div><label>Tarikh mula</label><input type="date" id="fs" onchange="calc()"><label>Tarikh tamat</label><input type="date" id="fe" onchange="calc()">
   <label>Sebab</label><textarea id="fw" rows="2" oninput="calc()"></textarea>
   <label id="fl">Lampiran sokongan (pilihan)</label><input type="file" id="ff" accept=".pdf,.jpg,.jpeg,.png" onchange="calc()">
   <div id="prev"></div><button class="btn" id="sub" onclick="submitReq()" disabled>Hantar permohonan</button></div>
-  <div class="mut">Hari kerja ikut <a href="#" onclick="S.tab='t';render();return false">takwim kilang</a>. Notis AL 5 hari bekerja. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
+  <div class="mut">Hari kerja ikut <a href="#" onclick="S.tab='t';render();return false">takwim kilang</a>. Notis AL 5 hari bekerja. Separuh hari (0.5) hanya untuk AL, EL dan UP, satu tarikh sahaja. Tarikh yang bertindih dengan permohonan sedia ada tidak dibenarkan. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
   return head + (S.reqs.length ? S.reqs.map(reqCard).join('') : '<div class="empty">Tiada permohonan lagi.</div>');
 }
 
@@ -159,7 +160,7 @@ function workView() {
 const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
 function wreq(r, x = '') {
   const sp = spl(r);
-  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${x}</div>`;
+  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${x}</div>`;
 }
 async function openAtt(path) { const { data, error } = await SB.storage.from('mc-attachments').createSignedUrl(path, 60); if (error) return toast(error.message); window.open(data.signedUrl, '_blank'); }
 function sug(r) { const e = Math.min(r.days, Math.max(0, balOf(r.user_id, 'EL'))); return r.ltype === 'EL' ? {EL:e, AL:r.days - e} : {[r.ltype]:+r.days}; }
@@ -252,13 +253,14 @@ function auditView() {
 }
 
 function calc() {
+  const t0 = $('ft').value, al = t0 !== 'MC'; $('hw').style.display = al ? '' : 'none'; if (!al) $('fh').value = ''; const half = $('fh').value; $('fe').disabled = !!half; if (half) $('fe').value = $('fs').value;
   const t = $('ft').value, s = $('fs').value, e = $('fe').value, f = $('ff').files[0];
   const okFile = !!f && /^(application\/pdf|image\/(jpeg|png))$/.test(f.type) && f.size <= 5e6;
   $('fl').textContent = t === 'MC' ? 'Lampiran MC (wajib)' : 'Lampiran sokongan (pilihan)';
   let h = '', ok = true;
   if (!s || !e) ok = false;
   else if (e < s) { ok = false; h += '<div class="note e">Tarikh tamat mesti selepas atau sama dengan tarikh mula.</div>'; }
-  else { const d = cnt(s, e); if (!d) { ok = false; h += '<div class="note e">Semua tarikh dipilih adalah hari tidak operasi.</div>'; } else h += `<div class="note o">Jumlah dikira: <b>${d} hari bekerja</b></div>`; }
+  else { const d = half ? cnt(s, e) / 2 : cnt(s, e); if (!d) { ok = false; h += '<div class="note e">Semua tarikh dipilih adalah hari tidak operasi.</div>'; } else h += `<div class="note o">Jumlah dikira: <b>${d} hari bekerja</b></div>`; }
   if (f && !okFile) { ok = false; h += '<div class="note e">Fail mesti PDF, JPG atau PNG, maksimum 5MB.</div>'; }
   if (t === 'MC' && !f) { ok = false; h += '<div class="note w">Lampirkan dokumen MC.</div>'; }
   if (ok && !$('fw').value.trim()) { ok = false; h += '<div class="note w">Tulis sebab ringkas.</div>'; }
@@ -273,7 +275,7 @@ async function submitReq() {
     const u = await SB.storage.from('mc-attachments').upload(path, f);
     if (u.error) return fail('Gagal muat naik lampiran: ' + u.error.message);
   }
-  const { error } = await SB.rpc('submit_leave', {p_type:$('ft').value, p_start:$('fs').value, p_end:$('fe').value, p_reason:$('fw').value.trim(), p_att:path});
+  const { error } = await SB.rpc('submit_leave', {p_type:$('ft').value, p_start:$('fs').value, p_end:$('fe').value, p_reason:$('fw').value.trim(), p_att:path, p_half:$('fh').value || null});
   if (error) return fail(error.message);
   toast('Permohonan dihantar'); S.tab = 'h'; await load();
 }
