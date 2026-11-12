@@ -28,7 +28,7 @@ h1{font-size:22px;margin:16px 0 8px}h2{font-size:16px;margin:20px 0 8px}
 .row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .mut{color:var(--mut);font-size:13px}
 .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--soft);color:var(--acc);white-space:nowrap}
-.tag.hr{background:var(--warn);color:var(--warn-i)}.tag.approved{background:var(--ok);color:var(--ok-i)}.tag.rejected{background:var(--bad);color:var(--bad-i)}
+.tag.hr{background:var(--warn);color:var(--warn-i)}.tag.approved{background:var(--ok);color:var(--ok-i)}.tag.rejected{background:var(--bad);color:var(--bad-i)}.tag.cancelled{background:var(--line);color:var(--mut)}
 label{display:block;font-weight:600;font-size:13px;margin:10px 0 3px}
 input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
 .btn{border:0;background:var(--acc);color:var(--acc-t);padding:10px 14px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;margin-top:10px}
@@ -48,7 +48,7 @@ a{color:var(--acc)}
 <script>
 const SB = supabase.createClient('https://sbdcjehrldfsmsbetaab.supabase.co', 'sb_publishable_9FB90rfbg6Kf-SgVFqlGJw_PsLrGCgh');
 const T = {AL:'Annual Leave', MC:'Medical Leave', EL:'Emergency Leave', UP:'Unpaid Leave'};
-const ST = {hr:'Menunggu HR', boss:'Menunggu Lady Boss', approved:'Diluluskan', rejected:'Ditolak'};
+const ST = {hr:'Menunggu HR', boss:'Menunggu Lady Boss', approved:'Diluluskan', rejected:'Ditolak', cancelled:'Dibatalkan'};
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
@@ -127,7 +127,7 @@ function setPwView() {
 
 const tag = s => `<span class="tag ${s}">${ST[s]}</span>`;
 function reqCard(r) {
-  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}</div>`;
+  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${r.cancel_reason ? `<div class="note w">Dibatalkan: ${esc(r.cancel_reason)}</div>` : ''}${cbtn(r)}</div>`;
 }
 function staffView() {
   const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
@@ -167,7 +167,7 @@ function workView() {
 const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
 function wreq(r, x = '') {
   const sp = spl(r);
-  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${x}</div>`;
+  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${r.cancel_reason ? `<div class="note w">Dibatalkan: ${esc(r.cancel_reason)}</div>` : ''}${cbtn(r)}${x}</div>`;
 }
 async function openAtt(path) { const { data, error } = await SB.storage.from('mc-attachments').createSignedUrl(path, 60); if (error) return toast(error.message); window.open(data.signedUrl, '_blank'); }
 function sug(r) { const e = Math.min(r.days, Math.max(0, balOf(r.user_id, 'EL'))); return r.ltype === 'EL' ? {EL:e, AL:r.days - e} : {[r.ltype]:+r.days}; }
@@ -246,7 +246,32 @@ async function setRange() {
   S.cm = f.slice(0, 7); S.day = null;
   toast(data > 0 ? data + ' permohonan terjejas, semak semula' : 'Julat dikemas kini'); await load();
 }
-const ACT = {hantar_permohonan:'Hantar permohonan', hr_hantar_kepada_boss:'HR hantar kepada Lady Boss', lulus:'Lulus', tolak:'Tolak', ubah_entitlement:'Ubah entitlement', ubah_takwim:'Ubah takwim'};
+function cbtn(r) {
+  const p = S.p, mine = r.user_id === p.id;
+  if (p.role === 'staf' || S.view === 'me') {
+    if (!mine) return '';
+    if (r.status === 'hr' || r.status === 'boss') return `<button class="btn ghost" style="margin-top:8px" onclick="cancelReq(${r.id})">Batal permohonan</button>`;
+    if (r.status === 'approved' && r.start_date > today()) return `<div class="mut" style="margin-top:6px">Untuk batal, hubungi ${p.role === 'hr' ? 'Lady Boss' : 'HR'}.</div>`;
+    return '';
+  }
+  if ((p.role === 'hr' || p.role === 'boss') && !mine && r.status === 'approved' && r.start_date > today())
+    return `<label>Sebab pembatalan (wajib)</label><input id="cr${r.id}"><button class="btn ghost" style="margin-top:8px" onclick="cancelAdmin(${r.id})">Batal cuti diluluskan</button>`;
+  return '';
+}
+async function cancelReq(id) {
+  if (!confirm('Batalkan permohonan ini?')) return;
+  const { error } = await SB.rpc('cancel_leave', {p_id:id, p_reason:null});
+  if (error) return toast(error.message);
+  toast('Permohonan dibatalkan'); await load();
+}
+async function cancelAdmin(id) {
+  const why = $('cr' + id).value.trim(); if (!why) return toast('Sebab pembatalan wajib');
+  if (!confirm('Batalkan cuti yang telah diluluskan ini? Baki akan dipulangkan.')) return;
+  const { error } = await SB.rpc('cancel_leave', {p_id:id, p_reason:why});
+  if (error) return toast(error.message);
+  toast('Cuti dibatalkan, baki dipulangkan'); await load();
+}
+const ACT = {batal:'Batal', hantar_permohonan:'Hantar permohonan', hr_hantar_kepada_boss:'HR hantar kepada Lady Boss', lulus:'Lulus', tolak:'Tolak', ubah_entitlement:'Ubah entitlement', ubah_takwim:'Ubah takwim'};
 function auText(a) {
   const d = a.detail || {};
   if (a.action === 'ubah_entitlement') { const o = d.sebelum || {}, n = d.selepas || {};
