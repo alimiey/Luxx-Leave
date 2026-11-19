@@ -1,318 +1,289 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ms">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LUXX Leave</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c00202">
-<link rel="icon" href="favicon.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="LUXX Leave">
+<meta name="apple-mobile-web-app-title" content="Luxx IMS">
+<title>Raw Material Stock</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f4f6f8;--card:#fff;--ink:#17212b;--mut:#66727f;--line:#dde3e9;--acc:#0e6b66;--acc-t:#fff;--soft:#e3f1f0;--warn:#fff3d6;--warn-i:#7a5600;--bad:#fde7e5;--bad-i:#a02a21;--ok:#e1f4e6;--ok-i:#1d6b34}
-@media(prefers-color-scheme:dark){:root{--bg:#10161c;--card:#19212a;--ink:#e8edf2;--mut:#93a0ad;--line:#2b3641;--acc:#3fb8b0;--acc-t:#062624;--soft:#173331;--warn:#3a2e10;--warn-i:#f1c96a;--bad:#3b1d1b;--bad-i:#f2a39c;--ok:#16301f;--ok-i:#8fd9a5}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-main{max-width:720px;margin:0 auto;padding:0 14px 40px}
-h1{font-size:22px;margin:16px 0 8px}h2{font-size:16px;margin:20px 0 8px}
-.tabs{display:flex;gap:16px;border-bottom:1px solid var(--line);margin:10px 0 12px;overflow-x:auto;white-space:nowrap}
-.tabs button{border:0;background:none;color:var(--mut);padding:8px 0;font:inherit;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
-.tabs button.on{color:var(--acc);border-color:var(--acc)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.bal b{font-size:22px}.bal span{color:var(--mut);font-size:13px;display:block}
-.bal i{display:block;height:5px;background:var(--line);border-radius:3px;margin-top:6px}.bal i u{display:block;height:100%;background:var(--acc);border-radius:3px}
-.row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.mut{color:var(--mut);font-size:13px}
-.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--soft);color:var(--acc);white-space:nowrap}
-.tag.hr{background:var(--warn);color:var(--warn-i)}.tag.approved{background:var(--ok);color:var(--ok-i)}.tag.rejected{background:var(--bad);color:var(--bad-i)}.tag.cancelled{background:var(--line);color:var(--mut)}
-label{display:block;font-weight:600;font-size:13px;margin:10px 0 3px}
-input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
-.btn{border:0;background:var(--acc);color:var(--acc-t);padding:10px 14px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;margin-top:10px}
-.btn.ghost{background:var(--line);color:var(--ink);margin:0}.btn:disabled{opacity:.45;cursor:not-allowed}
-.note{padding:8px 10px;border-radius:8px;font-size:13px;margin-top:8px}
-.note.w{background:var(--warn);color:var(--warn-i)}.note.e{background:var(--bad);color:var(--bad-i)}.note.o{background:var(--ok);color:var(--ok-i)}
-.empty{text-align:center;color:var(--mut);padding:22px 0}
-a{color:var(--acc)}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
-#toast.on{opacity:1}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef1ef;--card:#fff;--ink:#1c2a2d;--mute:#5d6e70;--line:#d6ddda;--accent:#0e6b5c;--on:#fff;--amber:#8a5a00;--amberbg:#fbefd2;--red:#a8231b;--redbg:#fbe0dd;--greenbg:#d9f0e8;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141c1e;--card:#1d282b;--ink:#e6eeec;--mute:#93a5a7;--line:#2f3f42;--accent:#3fbfa6;--on:#06201b;--amber:#f0c36a;--amberbg:#3a2f12;--red:#ff9c92;--redbg:#3d1c19;--greenbg:#143229;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141c1e;--card:#1d282b;--ink:#e6eeec;--mute:#93a5a7;--line:#2f3f42;--accent:#3fbfa6;--on:#06201b;--amber:#f0c36a;--amberbg:#3a2f12;--red:#ff9c92;--redbg:#3d1c19;--greenbg:#143229;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:76px}
+header{padding:16px 16px 4px;max-width:720px;margin:0 auto}
+h1{font-size:20px;margin:0;font-weight:600}
+.sub{color:var(--mute);font-size:13px}
+main{max-width:720px;margin:0 auto;padding:8px 16px 24px}
+.prog{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0 12px}
+.prog b{font-size:22px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);min-height:44px}
+label{display:block;margin:12px 0 0;font-weight:500;font-size:14px}
+label input,label select{margin-top:4px;font-weight:400}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;min-height:40px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.primary{background:var(--accent);color:var(--on);border-color:var(--accent);font-weight:600;width:100%;min-height:46px;margin-top:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chips button{border-radius:20px;padding:4px 12px;min-height:34px;font-size:13px}
+.chips .on,.seg .on{background:var(--accent);color:var(--on);border-color:var(--accent)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.seg button{min-height:46px;font-weight:600}
+.r{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.r .n{font-weight:500}
+.r .v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r .m{color:var(--mute);font-size:13px;grid-column:1/-1}
+.tag{font-size:12px;border-radius:4px;padding:1px 7px;justify-self:end;white-space:nowrap}
+.t-ok{background:var(--greenbg);color:var(--accent)}.t-z{background:var(--redbg);color:var(--red)}.t-u{background:var(--amberbg);color:var(--amber)}
+.hint{color:var(--mute);font-size:13px;min-height:20px;margin-top:4px}
+.msg{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:14px}
+.msg.e{background:var(--redbg);color:var(--red)}.msg.k{background:var(--greenbg);color:var(--accent)}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+.void .n,.void .v{text-decoration:line-through;color:var(--mute)}
+.ob{display:grid;grid-template-columns:1fr 92px auto;gap:8px;align-items:center}
+.ob input{min-height:40px;padding:6px 8px;text-align:right}
+.in{color:var(--accent)}.out{color:var(--red)}
+.stf{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.stf span{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:2px 4px 2px 10px;font-size:13px}
+.stf button{border:0;background:none;min-height:24px;padding:0 6px;color:var(--mute)}
+h2{font-size:15px;margin:22px 0 4px}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.k b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.k small{color:var(--mute);font-size:12px}
+.ch{display:flex;gap:3px;align-items:stretch;height:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 8px 6px}
+.cd{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.cb{flex:1;display:flex;align-items:flex-end;gap:1px;width:100%;justify-content:center}
+.cb i{display:block;width:42%;max-width:9px;min-height:1px;border-radius:2px 2px 0 0}
+.bi{background:var(--accent)}.bo{background:var(--red)}
+.cd span{font-size:10px;color:var(--mute)}
+.lg{font-size:12px;color:var(--mute);margin:6px 0 0}
+.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 10px}.lg i:first-child{margin-left:0}
+.hb{height:6px;background:var(--line);border-radius:3px;grid-column:1/-1}.hb i{display:block;height:100%;background:var(--red);border-radius:3px}
+nav button{font-size:12px;padding:8px 2px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;border:0;border-radius:0;background:none;min-height:56px;font-size:13px;color:var(--mute)}
+nav button.on{color:var(--accent);font-weight:600;box-shadow:inset 0 3px 0 var(--accent)}
+body.out header,body.out main,body.out nav{display:none}
+body:not(.out) #login{display:none}
+#login{max-width:360px;margin:12vh auto;padding:16px}
+nav button[hidden]{display:none}
+#off{background:var(--redbg);color:var(--red);text-align:center;padding:6px 12px;font-size:13px}
+#off[hidden]{display:none}
+#splash{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .35s}
+body.boot #splash{opacity:1;pointer-events:auto}
+#splash img{width:min(72vw,340px);height:auto}
+#login .logo{display:block;width:min(240px,64vw);margin:0 auto;border-radius:22px}
 </style>
 </head>
-<body>
-<main><div id="app"><div class="empty">Memuatkan...</div></div></main>
-<div id="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<body class="out boot">
+<div id="splash"><img src="icons/logo.png" alt="Luxx IMS"></div>
+<div id="off" hidden>Tiada internet. Rekod tidak boleh disimpan sehingga bersambung semula.</div>
+<div id="login"><img class="logo" src="icons/logo.png" alt="Luxx IMS - Inventory Management System"><div class="sub" style="margin:12px 0 4px;text-align:center">Log masuk</div>
+<label>Emel<input id="le" type="email" autocomplete="username"></label>
+<label>Kata laluan<input id="lp" type="password" autocomplete="current-password"></label>
+<button class="primary" data-act="login">Log masuk</button><div id="lm"></div></div>
+<header><h1 id="ttl">Raw Material Stock</h1><div class="sub" id="sub"></div><div id="mods"></div></header>
+<main id="app"></main>
+<nav id="tabs">
+<button data-act="tab" data-tab="dash">Dashboard</button>
+<button data-act="tab" data-tab="stok">Stok</button>
+<button data-act="tab" data-tab="tambah">Tambah</button>
+<button data-act="tab" data-tab="rekod">Rekod</button>
+<button data-act="tab" data-tab="kiraan">Kiraan</button>
+<button data-act="tab" data-tab="set">Akaun</button>
+</nav>
 <script>
-const SB = supabase.createClient('https://sbdcjehrldfsmsbetaab.supabase.co', 'sb_publishable_9FB90rfbg6Kf-SgVFqlGJw_PsLrGCgh');
-const T = {AL:'Annual Leave', MC:'Medical Leave', EL:'Emergency Leave', UP:'Unpaid Leave'};
-const ST = {hr:'Menunggu HR', boss:'Menunggu Lady Boss', approved:'Diluluskan', rejected:'Ditolak', cancelled:'Dibatalkan'};
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const today = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kuala_Lumpur'});
-const fmt = s => s.split('-').reverse().join('/');
-const hf = r => r.half === 'AM' ? ' (pagi)' : r.half === 'PM' ? ' (petang)' : '';
-const addDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const isWork = s => S.cal[s] ? S.cal[s] === 'op' : new Date(s + 'T00:00:00Z').getUTCDay() !== 5;
-const cnt = (a, b) => { let n = 0; for (let d = a; d <= b; d = addDay(d, 1)) if (isWork(d)) n++; return n; };
-let S = {scr:'in', mode:'in', msg:'', p:null, bal:[], reqs:[], cal:{}, tab:'a', cmsg:'', cm:today().slice(0, 7), day:null, cn:{}};
-let setPw = /type=(invite|recovery)/.test(location.hash);
+const SB_URL="https://xrlzyrorlwgsnkrkodpq.supabase.co",SB_KEY="sb_publishable_iIhF-ZnPhY5AxLiPUjAi4Q_9QVEDuWt";
+const SB=supabase.createClient(SB_URL,SB_KEY);
+let PRODUCTS=[],ME=null,MOD='raw',PROD=[],ALLTX=[];const PID={},NM={},UNIT={};
+let DEFERRED=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFERRED=e});
+const installBox=()=>matchMedia('(display-mode: standalone)').matches?'':'<h2>Pasang di telefon</h2>'+(DEFERRED?'<button data-act="install">Pasang app</button>':'<p class="sub">iPhone (Safari): tekan Share, lepas tu Add to Home Screen. Android (Chrome): tekan menu ⋮, lepas tu Install app.</p>');
+const U=p=>UNIT[p]||'Kg';
+const qs=(l,f)=>{const m={};l.forEach(x=>{const u=U(x.p);m[u]=(m[u]||0)+f(x)});const k=Object.keys(m);return k.length?k.map(u=>fmt(m[u])+' '+u).join(' · '):'0 '+(MOD==='raw'?'Kg':'Pcs')};
+const ALLOW={superuser:["dash","stok","tambah","rekod","kiraan","set"],operator:["dash","stok","tambah","rekod","set"],viewer:["dash","stok","rekod","set"]};
+const emsg=e=>/row-level|permission/i.test(e.message)?"Anda tiada kebenaran untuk tindakan ini.":e.message;
+const KEY='stok_mentah_v1',EPS=0.0005,RANK={OB:0,IN:1,OUT:2};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>(+Number(n).toFixed(3)).toLocaleString('en-MY');
+const dmy=s=>{const d=new Date(s);return isNaN(d)?s:d.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})};
+let S={tx:[],staff:['Anisa','Daim','Hilman','Fahmi','Sofia','Thira','Afrina','Yusry','Auni','Ali','Muaz','Siti','Alia','Athirah','Aiman'],start:'2026-11-01'};
+const save=()=>{};
+let tab='dash',dp='m',mode='IN',q='',flt='all',rt='all',vid=null,cn='',csvText='';
+const live=(l,p)=>l.filter(t=>t.p===p&&!t.v);
+const bal=(p,l=S.tx)=>live(l,p).reduce((a,t)=>a+(t.type==='OUT'?-t.q:t.q),0);
+const hasOB=p=>live(S.tx,p).some(t=>t.type==='OB');
+function valid(l,p){let b=0;for(const t of live(l,p).sort((a,c)=>a.d<c.d?-1:a.d>c.d?1:RANK[a.type]-RANK[c.type])){b+=t.type==='OUT'?-t.q:t.q;if(b<-EPS)return false}return true}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const tagOf=(o,b)=>!o?['t-u','Belum dikira']:b<=EPS?['t-z','Habis']:['t-ok','Ada'];
+const staffOpts=sel=>'<option value="">Pilih nama</option>'+S.staff.map(n=>`<option${n===sel?' selected':''}>${esc(n)}</option>`).join('');
+const chips=(cur,arr,act)=>'<div class="chips">'+arr.map(([k,l])=>`<button data-act="${act}" data-k="${k}" class="${cur===k?'on':''}">${l}</button>`).join('')+'</div>';
+const search=ph=>`<input id="q" type="search" placeholder="${ph}" value="${esc(q)}" autocomplete="off">`;
 
-function toast(t) { const e = $('toast'); e.textContent = t; e.className = 'on'; clearTimeout(toast.t); toast.t = setTimeout(() => e.className = '', 2800); }
-function go(m) { S.mode = m; S.msg = ''; render(); }
-
-SB.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY' || (setPw && ev === 'SIGNED_IN')) { S.scr = 'setpw'; render(); } });
-(async () => {
-  const { data: { session } } = await SB.auth.getSession();
-  if (session && !setPw) await load(); else render();
-})();
-
-async function load() {
-  const { data: { user } } = await SB.auth.getUser();
-  const { data: p } = await SB.from('profiles').select('*').eq('id', user.id).single();
-  if (!p || !p.active) { await SB.auth.signOut(); S.scr = 'in'; S.msg = 'Akaun tidak aktif atau profil tiada. Hubungi HR.'; return render(); }
-  S.p = p;
-  const [b, r, c] = await Promise.all([
-    SB.from('v_balances').select('*').eq('user_id', p.id).eq('year', +today().slice(0, 4)),
-    SB.from('leave_requests').select('*').eq('user_id', p.id).order('created_at', {ascending:false}),
-    SB.from('calendar_days').select('*')]);
-  S.bal = b.data || []; S.reqs = r.data || []; S.cal = {};
-  S.cn = {}; (c.data || []).forEach(x => { S.cal[x.day] = x.status; S.cn[x.day] = x.note; });
-  if (['hr', 'boss', 'acc'].includes(p.role)) {
-    const y = +today().slice(0, 4);
-    const [a, q, l, v, au] = await Promise.all([SB.from('profiles').select('*').order('employee_id'), SB.from('leave_requests').select('*').order('created_at', {ascending:false}), SB.from('leave_allocations').select('*'), SB.from('v_balances').select('*').eq('year', y), SB.from('audit_log').select('*').order('at', {ascending:false}).limit(100)]);
-    S.all = {pf:a.data || [], rq:q.data || [], al:l.data || [], bal:v.data || [], au:au.data || []};
-  }
-  if (!S.view) { S.view = p.role === 'staf' ? 'me' : 'w'; S.tab = p.role === 'hr' ? 'i' : p.role === 'boss' ? 'k' : p.role === 'acc' ? 'b' : 'a'; }
-  S.scr = 'app'; render();
+const views={
+dash(){
+  const td=new Date();td.setMinutes(td.getMinutes()-td.getTimezoneOffset());
+  const today=td.toISOString().slice(0,10),A=today<S.start?S.start:today;
+  const sh=(s,n)=>{const d=new Date(s+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+  const from={h:A,'7':sh(A,-6),m:A.slice(0,8)+'01',a:S.start}[dp];
+  const mv=S.tx.filter(x=>!x.v&&x.type!=='OB'&&x.d.slice(0,10)<=A);
+  const ok=mv.filter(x=>x.d.slice(0,10)>=from);
+  const sum=(l,t)=>l.filter(x=>x.type===t).reduce((a,x)=>a+x.q,0);
+  const counted=PRODUCTS.filter(hasOB),zero=counted.filter(p=>bal(p)<=EPS);
+  const CU=MOD==='raw'?'Kg':'Pcs';
+  const days=Array.from({length:14},(_,i)=>sh(A,i-13)).map(d=>{const l=mv.filter(x=>x.d.slice(0,10)===d&&U(x.p)===CU);return{d,i:sum(l,'IN'),o:sum(l,'OUT')}});
+  const mx=Math.max(1,...days.map(x=>Math.max(x.i,x.o)));
+  const by={};ok.filter(x=>x.type==='OUT'&&U(x.p)===CU).forEach(x=>by[x.p]=(by[x.p]||0)+x.q);
+  const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,5),tm=top.length?top[0][1]:1;
+  const low=counted.filter(p=>bal(p)>EPS).sort((a,b)=>bal(a)-bal(b)).slice(0,5);
+  const lastN=t=>[...mv].filter(x=>x.type===t).sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
+  const rl=l=>l.map(x=>`<div class="r"><span class="n">${esc(x.p)}</span><span class="v ${x.type==='OUT'?'out':'in'}"><b>${x.type==='OUT'?'−':'+'}${fmt(x.q)}</b> ${U(x.p)}</span><span class="m">${dmy(x.d)} · ${esc(x.n)}</span></div>`).join('')||'<div class="empty">Belum ada rekod.</div>';
+  const rw=(n,v,b)=>`<div class="r"><span class="n">${esc(n)}</span><span class="v">${v}</span>${b===undefined?'':`<span class="hb"><i style="width:${b}%"></i></span>`}</div>`;
+  return chips(dp,[['h','Hari ini'],['7','7 hari'],['m','Bulan ini'],['a','Semua']],'dp')
+  +`<div class="kp"><div class="k"><small>Diterima</small><b class="in">${qs(ok.filter(x=>x.type==='IN'),x=>x.q)}</b></div><div class="k"><small>Dikeluarkan</small><b class="out">${qs(ok.filter(x=>x.type==='OUT'),x=>x.q)}</b></div>
+  <div class="k"><small>Jumlah baki (${counted.length} bahan dikira)</small><b>${qs(counted.map(p=>({p,q:bal(p)})),x=>x.q)}</b></div>
+  <div class="k"><small>Perlu perhatian</small><b class="${zero.length?'out':''}">${zero.length} habis</b><small>${PRODUCTS.length-counted.length} belum dikira</small></div></div>
+  <h2>14 hari terakhir (${CU})</h2><div class="ch">${days.map(x=>`<div class="cd"><div class="cb"><i class="bi" style="height:${x.i/mx*100}%" title="Masuk ${fmt(x.i)} ${CU}"></i><i class="bo" style="height:${x.o/mx*100}%" title="Keluar ${fmt(x.o)} ${CU}"></i></div><span>${x.d.slice(8)}</span></div>`).join('')}</div>
+  <div class="lg"><i class="bi"></i>Masuk<i class="bo"></i>Keluar</div>
+  <h2>Paling banyak dikeluarkan (${CU})</h2>${top.map(([p,v])=>rw(p,`<b>${fmt(v)}</b> ${CU}`,v/tm*100)).join('')||'<div class="empty">Belum ada pengeluaran dalam tempoh ini.</div>'}
+  <h2>Habis stok</h2>${zero.map(p=>rw(p,'<span class="tag t-z">Habis</span>')).join('')||'<div class="empty">Tiada bahan habis.</div>'}
+  <h2>Baki paling sedikit</h2>${low.map(p=>rw(p,`<b>${fmt(bal(p))}</b> ${U(p)}`)).join('')||'<div class="empty">Belum ada bahan dikira.</div>'}
+  <h2>5 terakhir diterima</h2>${rl(lastN('IN'))}
+  <h2>5 terakhir dikeluarkan</h2>${rl(lastN('OUT'))}`;
+},
+stok(){
+  const done=PRODUCTS.filter(hasOB).length,n=PRODUCTS.length,z=PRODUCTS.filter(p=>hasOB(p)&&bal(p)<=EPS).length;
+  return `<div class="prog"><div><b>${done} / ${n}</b> bahan sudah dikira fizikal</div><div class="sub">${n-done} belum dikira. ${z} habis stok.</div><div class="bar"><i style="width:${done/n*100}%"></i></div></div>`
+  +search('Cari bahan')+chips(flt,[['all','Semua'],['a','Ada'],['z','Habis'],['u','Belum dikira']],'flt')+'<div id="list"></div>';
+},
+tambah(){
+  const d=new Date(Math.max(Date.now(),new Date(S.start+'T08:00')));d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return `<div class="seg"><button data-act="mode" data-k="IN" class="${mode==='IN'?'on':''}">Terima masuk</button><button data-act="mode" data-k="OUT" class="${mode==='OUT'?'on':''}">Keluar</button></div>
+  <label>Bahan<input id="fp" list="pl" placeholder="Taip untuk cari bahan" autocomplete="off"></label>
+  <datalist id="pl">${PRODUCTS.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+  <div class="hint" id="fb"></div>
+  ${MOD==='raw'?`<label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="decimal" step="any" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><select id="fu" style="margin-top:0"><option value="kg">Kg</option><option value="g">g</option></select></div></label>`:`<label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="numeric" step="1" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><span id="fut" class="sub" style="text-align:center">Pcs / Roll</span></div></label>`}<div class="hint" id="fh"></div>
+  <label>Tarikh dan masa<input id="fd" type="datetime-local" min="${S.start}T00:00" value="${d.toISOString().slice(0,16)}"></label>
+  <label>Nama<input id="fn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>
+  <label>Catatan (pilihan)<input id="fr" autocomplete="off"></label>
+  <button class="primary" data-act="submit">${mode==='IN'?'Simpan penerimaan':'Simpan pengeluaran'}</button><div id="fm"></div>`;
+},
+rekod(){return search('Cari bahan atau nama')+chips(rt,[['all','Semua'],['IN','Masuk'],['OUT','Keluar'],['OB','Kiraan']],'rt')+'<div id="list"></div>'},
+kiraan(){return `<p class="sub">Kira stok fizikal dan masukkan di sini. Nilai ini jadi baki permulaan pada ${dmy(S.start+'T00:00').slice(0,10)}.</p>
+  <label>Dikira oleh<input id="cn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>${ME.role==='superuser'?`<h2>${MOD==='raw'?'Tambah bahan baharu':'Tambah item baharu'}</h2><div class="ob" style="grid-template-columns:${MOD==='raw'?'1fr auto':'1fr 84px auto'}"><input id="np" placeholder="${MOD==='raw'?'Nama bahan':'Nama item'}" autocomplete="off" style="text-align:left">${MOD==='raw'?'':'<select id="npu"><option>Pcs</option><option>Roll</option></select>'}<button data-act="addprod">Tambah</button></div><div id="npm"></div>`:''}<div style="height:8px"></div>`+search('Cari bahan')+'<div id="list"></div>'},
+set(){return `<h2>Akaun</h2><div class="r"><span class="n">${esc(ME.code)}</span><span class="tag t-ok">${{superuser:'Superuser',operator:'Operator / QA & QC',viewer:'View only'}[ME.role]}</span></div>${ME.role==='superuser'?'<h2>Data</h2><button data-act="csv">Eksport rekod (CSV)</button><div id="csvbox"></div>':''}${installBox()}<div style="height:16px"></div><button data-act="logout">Log keluar</button>`}
+};
+const lists={
+stok(){const t=q.toLowerCase();return PRODUCTS.filter(p=>p.toLowerCase().includes(t)).map(p=>({p,o:hasOB(p),b:bal(p)})).filter(r=>flt==='all'||(flt==='u'&&!r.o)||(flt==='z'&&r.o&&r.b<=EPS)||(flt==='a'&&r.o&&r.b>EPS))
+  .map(r=>{const g=tagOf(r.o,r.b);return `<div class="r"><span class="n">${esc(r.p)}</span><span class="v">${r.o?`<b>${fmt(r.b)}</b> ${U(r.p)}`:'–'}</span><span></span><span class="tag ${g[0]}">${g[1]}</span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'},
+rekod(){const t=q.toLowerCase();return [...S.tx].filter(x=>(rt==='all'||x.type===rt)&&(x.p+' '+x.n).toLowerCase().includes(t)).sort((a,b)=>a.d<b.d?1:-1).slice(0,200)
+  .map(x=>{const s=x.type==='OUT'?'−':x.type==='IN'?'+':'=';const c=x.type==='OUT'?'out':'in';const lab={IN:'Masuk',OUT:'Keluar',OB:'Kiraan permulaan'}[x.type];
+  return `<div class="r ${x.v?'void':''}"><span class="n">${esc(x.p)}</span><span class="v ${c}"><b>${s}${fmt(x.q)}</b> ${U(x.p)}</span>
+  <span class="m">${lab} · ${dmy(x.d)} · ${esc(x.n)}${x.r?' · '+esc(x.r):''}${x.v?` · Dibatalkan: ${esc(x.vr)}`:''}</span>
+  ${!x.v&&x.type!=='OB'&&ME.role==='superuser'?(vid===x.id?`<span class="m"><span class="ob" style="grid-template-columns:1fr auto"><input id="vr" placeholder="Sebab batal"><button data-act="vok" data-k="${x.id}">Sahkan batal</button></span></span><span class="m" id="vm"></span>`:`<span class="m"><button data-act="vask" data-k="${x.id}" style="min-height:32px;padding:2px 10px;font-size:13px">Batal rekod</button></span>`):''}</div>`}).join('')||'<div class="empty">Belum ada rekod.</div>'},
+kiraan(){const t=q.toLowerCase();return PRODUCTS.map((p,i)=>[p,i]).filter(([p])=>p.toLowerCase().includes(t)).map(([p,i])=>{const o=live(S.tx,p).find(x=>x.type==='OB'),g=tagOf(!!o,1);
+  return `<div class="r"><span class="n">${esc(p)}</span><span class="tag ${g[0]}" id="tg${i}">${o?'Dikira':'Belum dikira'}</span>
+  <span class="m"><span class="ob"><span class="sub">Kiraan fizikal (${U(p)})</span><input id="ob${i}" type="number" inputmode="${U(p)==='Kg'?'decimal':'numeric'}" step="${U(p)==='Kg'?'any':'1'}" min="0" value="${o?o.q:''}"><button data-act="ob" data-k="${i}">Simpan</button></span></span><span class="m" id="om${i}"></span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'}
+};
+function updateList(){const el=$('#list');if(el&&lists[tab])el.innerHTML=lists[tab]()}
+function render(){document.querySelectorAll('#tabs button').forEach(b=>{b.hidden=!ALLOW[ME.role].includes(b.dataset.tab);b.classList.toggle('on',b.dataset.tab===tab)});
+  $('#sub').textContent=PRODUCTS.length+(MOD==='raw'?' bahan':' item');$('#ttl').textContent=document.title=(MOD==='raw'?'Raw Material Stock':'Packaging Stock');$('#mods').innerHTML=chips(MOD,[['raw','Raw Material'],['pack','Packaging']],'mod');$('#app').innerHTML=views[tab]();updateList()}
+const show=(id,t,k)=>{const e=$(id);if(e)e.innerHTML=`<div class="msg ${k?'k':'e'}">${t}</div>`};
+const acts={
+tab(b){const t=b.dataset.tab;tab=t;q='';vid=null;render();load().then(()=>{if(tab===t&&t!=='tambah'&&t!=='kiraan')render()}).catch(()=>{})},
+mod(b){MOD=b.dataset.k;try{localStorage.setItem('mod',MOD)}catch(e){}applyMod();q='';flt='all';rt='all';vid=null;render()},
+async install(){if(!DEFERRED)return;DEFERRED.prompt();try{await DEFERRED.userChoice}catch(e){}DEFERRED=null;render()},
+async login(){const {error}=await SB.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});if(error)return show('#lm','Emel atau kata laluan salah.');await boot()},
+dp(b){dp=b.dataset.k;render()},flt(b){flt=b.dataset.k;render()},rt(b){rt=b.dataset.k;render()},mode(b){mode=b.dataset.k;render()},
+async submit(){
+  const p=$('#fp').value.trim(),qty=Math.round(((($('#fu')||{}).value==='g')?parseFloat($('#fq').value)/1000:parseFloat($('#fq').value))*1000)/1000,d=$('#fd').value,n=$('#fn').value.trim(),r=$('#fr').value.trim();
+  if(!PRODUCTS.includes(p))return show('#fm','Pilih bahan daripada senarai.');
+  if(!(qty>0))return show('#fm',MOD==='raw'?'Kuantiti mesti lebih daripada 0 (minimum 1 g).':'Kuantiti mesti lebih daripada 0.');
+  if(MOD==='pack'&&!Number.isInteger(qty))return show('#fm','Kuantiti mesti nombor bulat.');
+  if(!d||d<S.start+'T00:00')return show('#fm','Tarikh mesti pada atau selepas tarikh mula sistem.');
+  if(!n)return show('#fm','Tulis nama.');
+  if(!hasOB(p))return show('#fm','Kiraan permulaan bahan ini belum dibuat. Masukkan di tab Kiraan dahulu.');
+  const {error}=await SB.from('transactions').insert({product_id:PID[p],type:mode,qty,occurred_at:new Date(d).toISOString(),staff_name:n,remark:r||null});
+  if(error)return show('#fm',esc(emsg(error)));
+  await load();cn=n;$('#fq').value='';$('#fr').value='';$('#fp').value='';$('#fb').textContent='';$('#fh').textContent='';
+  show('#fm',`Disimpan (${fmt(qty)} ${U(p)}). Baki ${esc(p)} sekarang ${fmt(bal(p))} ${U(p)}.`,1)},
+vask(b){vid=b.dataset.k;updateList()},
+async vok(b){const r=$('#vr').value.trim();if(!r)return show('#vm','Tulis sebab batal.');
+  const {error}=await SB.rpc('void_transaction',{p_id:b.dataset.k,p_reason:r});
+  if(error)return show('#vm',esc(emsg(error)));vid=null;await load();updateList()},
+async ob(b){const i=+b.dataset.k,p=PRODUCTS[i],v=parseFloat($('#ob'+i).value);
+  if(!(v>=0))return show('#om'+i,'Masukkan kiraan fizikal (0 atau lebih).');
+  if(U(p)!=='Kg'&&!Number.isInteger(v))return show('#om'+i,'Kiraan mesti nombor bulat.');
+  if(!(cn||$('#cn').value.trim()))return show('#om'+i,'Tulis nama di atas dahulu.');
+  cn=$('#cn').value.trim()||cn;
+  const {error}=await SB.rpc('set_opening_balance',{p_product:PID[p],p_qty:Math.round(v*1000)/1000,p_staff:cn});
+  if(error)return show('#om'+i,esc(emsg(error)));
+  await load();$('#tg'+i).className='tag t-ok';$('#tg'+i).textContent='Dikira';show('#om'+i,'Disimpan.',1)},
+async csv(){const h='Tarikh,Jenis,Bahan,Kuantiti,Unit,Nama,Catatan,Batal';const c=s=>'"'+String(s||'').replace(/"/g,'""')+'"';
+  csvText=[h,...[...S.tx].sort((a,b)=>a.d<b.d?-1:1).map(x=>[x.d,x.type,c(x.p),x.q,U(x.p),c(x.n),c(x.r),c(x.v?x.vr:'')].join(','))].join('\n');
+  let dl=null;try{dl=await window.claude.use('downloads')}catch(e){}
+  if(dl){try{await dl.save({filename:'rekod-'+(MOD==='raw'?'raw-material':'packaging')+'.csv',data:new Blob([csvText],{type:'text/csv'})});return}catch(e){if(e&&e.code==='declined')return}}
+  $('#csvbox').innerHTML='<p class="sub">Salin teks ini ke Excel:</p><textarea readonly style="width:100%;height:140px">'+esc(csvText)+'</textarea>'},
+async addprod(){const n=$('#np').value.trim();if(!n)return show('#npm','Tulis nama bahan.');
+  if(Object.keys(PID).some(x=>x.toLowerCase()===n.toLowerCase()))return show('#npm','Bahan ini sudah ada.');
+  const {error}=await SB.from('products').insert({name:n,unit:MOD==='raw'?'Kg':$('#npu').value,category:MOD==='raw'?'raw':'packaging'});
+  if(error)return show('#npm',esc(emsg(error)));
+  await load();render();show('#npm','Ditambah: '+esc(n)+'. Masukkan kiraan fizikal di senarai bawah.',1)},
+async logout(){await SB.auth.signOut();location.reload()}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&acts[b.dataset.act])acts[b.dataset.act](b)});
+const hintQty=()=>{const f=$('#fh'),v=parseFloat(($('#fq')||{}).value),u=($('#fu')||{}).value;if(f)f.textContent=(u==='g'&&v>0)?'= '+fmt(Math.round(v)/1000)+' Kg akan dimasukkan ke stok':''};
+document.addEventListener('input',e=>{
+  if(e.target.id==='fq'||e.target.id==='fu')hintQty();
+  if(e.target.id==='q'){q=e.target.value;updateList()}
+  if(e.target.id==='fp'){const p=e.target.value.trim(),f=$('#fb'),ut=$('#fut');if(ut)ut.textContent=UNIT[p]||'Pcs / Roll';f.textContent=!p?'':!PRODUCTS.includes(p)?'Bahan tidak dalam senarai.':hasOB(p)?'Baki sekarang: '+fmt(bal(p))+' '+U(p):'Kiraan permulaan belum dibuat.'}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='fu')hintQty();
+  if(e.target.id==='st'&&e.target.value){S.start=e.target.value;save();render()}
+  if(e.target.id==='cn')cn=e.target.value;
+  if(e.target.id==='fn')cn=e.target.value;
+});
+const toLocal=s=>{const d=new Date(s);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+async function all(mk){let o=[],f=0;for(;;){const {data,error}=await mk().range(f,f+999);if(error)throw error;o=o.concat(data);if(data.length<1000)return o;f+=1000}}
+function applyMod(){const cat=MOD==='raw'?'raw':'packaging',ps=PROD.filter(x=>x.category===cat),ids=new Set(ps.map(x=>x.id));PRODUCTS=ps.map(x=>x.name);
+  S.tx=ALLTX.filter(r=>ids.has(r.product_id)).map(r=>({id:r.id,type:r.type,p:NM[r.product_id],q:+r.qty,d:toLocal(r.occurred_at),n:r.staff_name||'',r:r.remark||'',v:r.voided?1:0,vr:r.void_reason||''}))}
+async function load(){
+  const [pr,tx,st,se]=await Promise.all([all(()=>SB.from('products').select('id,name,unit,category').eq('active',true).order('id')),
+    all(()=>SB.from('transactions').select('*').order('occurred_at').order('id')),
+    all(()=>SB.from('staff').select('name').eq('active',true).order('name')),all(()=>SB.from('app_settings').select('key,value'))]);
+  PROD=pr;pr.forEach(x=>{NM[x.id]=x.name;PID[x.name]=x.id;UNIT[x.name]=x.unit});ALLTX=tx;applyMod();
+  S.staff=st.map(x=>x.name);const s=se.find(x=>x.key==='start_date');if(s)S.start=s.value;
 }
-
-async function doLogin() {
-  const id = $('li').value.trim().toUpperCase(), pw = $('lp') ? $('lp').value : '';
-  if (!id) { S.msg = 'Masukkan Employee ID.'; return render(); }
-  const { data: email } = await SB.rpc('email_for_employee', {p_eid: id});
-  if (S.mode === 'forgot') {
-    if (email) await SB.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
-    toast('Jika ID wujud, pautan reset dihantar ke e-mel berdaftar'); return go('in');
-  }
-  if (!email || !pw) { S.msg = 'Employee ID atau kata laluan tidak betul.'; return render(); }
-  const { error } = await SB.auth.signInWithPassword({email, password: pw});
-  if (error) { S.msg = /confirm/i.test(error.message) ? 'E-mel akaun belum disahkan. Hubungi HR.' : 'Employee ID atau kata laluan tidak betul.'; return render(); }
-  await load();
+const T0=Date.now();
+async function boot(){await boot0();const w=800-(Date.now()-T0);if(w>0)await new Promise(r=>setTimeout(r,w));document.body.classList.remove('boot')}
+async function boot0(){
+  try{
+    const {data:{session}}=await SB.auth.getSession();
+    if(!session){document.body.classList.add('out');return}
+    const {data:pf}=await SB.from('profiles').select('code,role').eq('user_id',session.user.id).maybeSingle();
+    if(!pf){await SB.auth.signOut();document.body.classList.add('out');show('#lm','Akaun ini belum diberi peranan. Hubungi pentadbir.');return}
+    ME=pf;try{MOD=localStorage.getItem('mod')==='pack'?'pack':'raw'}catch(e){}await load();document.body.classList.remove('out');tab='dash';render();
+  }catch(e){document.body.classList.add('out');show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
 }
-async function savePw() {
-  const p1 = $('np').value;
-  if (p1.length < 8) { S.msg = 'Kata laluan minimum 8 aksara.'; return render(); }
-  const { error } = await SB.auth.updateUser({password: p1});
-  if (error) { S.msg = error.message; return render(); }
-  setPw = false; history.replaceState(null, '', location.pathname); toast('Kata laluan disimpan'); await load();
-}
-async function logout() { await SB.auth.signOut(); S.scr = 'in'; S.mode = 'in'; S.view = null; S.sel = null; render(); }
-
-function loginView() {
-  const m = S.mode;
-  return `<h1>LUXX Leave</h1><div class="card"><h2 style="margin-top:0">${m === 'in' ? 'Log masuk' : 'Lupa kata laluan'}</h2>
-  <label>Employee ID</label><input id="li" autocapitalize="characters" autocomplete="username">
-  ${m === 'in' ? '<label>Kata laluan</label><input id="lp" type="password" autocomplete="current-password">' : ''}
-  ${S.msg ? `<div class="note e">${esc(S.msg)}</div>` : ''}
-  <button class="btn" onclick="doLogin()">${m === 'in' ? 'Log masuk' : 'Hantar pautan reset'}</button>
-  <div style="margin-top:12px"><a href="#" onclick="go('${m === 'in' ? 'forgot' : 'in'}');return false">${m === 'in' ? 'Lupa kata laluan' : 'Kembali'}</a></div></div>
-  <div class="mut">Akaun baharu: ikut pautan aktivasi dalam e-mel yang dihantar HR.</div>`;
-}
-function setPwView() {
-  return `<h1>LUXX Leave</h1><div class="card"><h2 style="margin-top:0">Tetapkan kata laluan</h2><label>Kata laluan baharu (minimum 8 aksara)</label><input id="np" type="password" autocomplete="new-password">${S.msg ? `<div class="note e">${esc(S.msg)}</div>` : ''}<button class="btn" onclick="savePw()">Simpan</button></div>`;
-}
-
-const tag = s => `<span class="tag ${s}">${ST[s]}</span>`;
-function reqCard(r) {
-  return `<div class="card"><div class="row"><div>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${r.attachment_path ? ' · Lampiran: ada' : ''}</div>${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${r.cancel_reason ? `<div class="note w">Dibatalkan: ${esc(r.cancel_reason)}</div>` : ''}${cbtn(r)}</div>`;
-}
-function staffView() {
-  const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';render()">${l}</button>`;
-  const head = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>
-  <div class="tabs">${tb('a', 'Dashboard')}${p.role === 'boss' ? '' : tb('m', 'Mohon cuti') + tb('h', 'Sejarah') + tb('t', 'Takwim')}</div>`;
-  if (p.role === 'boss') return head + '<div class="card">Skrin kelulusan Lady Boss akan ditambah dalam Bahagian 2.</div>';
-  const note = p.role !== 'staf' ? '<button class="btn ghost" onclick="S.view=\'w\';S.tab=\'' + (p.role === 'hr' ? 'i' : 'b') + '\';render()">Kembali ke menu ' + (p.role === 'hr' ? 'HR' : 'Semakan') + '</button>' : '';
-  if (S.tab === 't') return head + note + takwimView();
-  if (S.tab === 'a') {
-    const bm = Object.fromEntries(S.bal.map(b => [b.ltype, b]));
-    const cards = Object.keys(T).map(k => { const b = bm[k], tot = b ? +b.base + +b.bf + +b.award + +b.swap : 0, bl = b ? +b.balance : 0;
-      return `<div class="card bal"><span>${T[k]}</span><b>${k} ${bl}/${tot}</b><i><u style="width:${tot ? Math.max(0, bl / tot * 100) : 0}%"></u></i></div>`; }).join('');
-    const al = bm.AL, brk = al ? `<div class="mut">AL: asas ${al.base} + B/F ${al.bf} + anugerah ${al.award} + ganti ${al.swap} − guna ${al.used}</div>` : '<div class="note w">Entitlement tahun ini belum diisi. Hubungi HR.</div>';
-    const ap = S.reqs.filter(r => r.status === 'approved' && r.end_date >= today());
-    return head + note + `<div class="grid">${cards}</div>${brk}<h2>Cuti diluluskan akan datang</h2>` + (ap.length ? ap.map(reqCard).join('') : '<div class="empty">Tiada cuti diluluskan akan datang.</div>');
-  }
-  if (S.tab === 'm') return head + `<div class="card"><label>Jenis cuti</label><select id="ft" onchange="calc()">${Object.keys(T).map(k => `<option value="${k}">${k} – ${T[k]}</option>`).join('')}</select>
-  <div id="hw" style="display:none"><label>Tempoh</label><select id="fh" onchange="calc()"><option value="">Sehari penuh atau lebih</option><option value="AM">Separuh hari (pagi)</option><option value="PM">Separuh hari (petang)</option></select></div><label>Tarikh mula</label><input type="date" id="fs" onchange="calc()"><label>Tarikh tamat</label><input type="date" id="fe" onchange="calc()">
-  <label>Sebab</label><textarea id="fw" rows="2" oninput="calc()"></textarea>
-  <label id="fl">Lampiran sokongan (pilihan)</label><input type="file" id="ff" accept=".pdf,.jpg,.jpeg,.png" onchange="calc()">
-  <div id="prev"></div><button class="btn" id="sub" onclick="submitReq()" disabled>Hantar permohonan</button></div>
-  <div class="mut">Hari kerja ikut <a href="#" onclick="S.tab='t';render();return false">takwim kilang</a>. Notis AL 5 hari bekerja. Separuh hari (0.5) hanya untuk AL, EL dan UP, satu tarikh sahaja. Tarikh yang bertindih dengan permohonan sedia ada tidak dibenarkan. MC dan EL boleh dimohon sehingga 7 hari ke belakang. Lampiran PDF/JPG/PNG, maksimum 5MB.</div>`;
-  return head + (S.reqs.length ? S.reqs.map(reqCard).join('') : '<div class="empty">Tiada permohonan lagi.</div>');
-}
-
-/* ===== Bahagian 2: HR, Lady Boss, Akaun/Admin ===== */
-const nm = id => (S.all.pf.find(x => x.id === id) || {}).full_name || '?';
-const balOf = (u, k) => +(S.all.bal.find(b => b.user_id === u && b.ltype === k) || {balance:0}).balance;
-const tot = b => b ? +b.base + +b.bf + +b.award + +b.swap : 0;
-function appView() { const p = S.p; return (p.role === 'boss' || (p.role !== 'staf' && S.view !== 'me')) ? workView() : staffView(); }
-function workView() {
-  const p = S.p, tb = (t, l) => `<button class="${S.tab === t ? 'on' : ''}" onclick="S.tab='${t}';S.sel=null;render()">${l}</button>`;
-  const top = `<div class="row" style="align-items:center;margin:14px 0 0"><div><b>${esc(p.full_name)}</b><div class="mut">${esc(p.employee_id)} · ${p.role === 'hr' ? 'HR' : p.role === 'boss' ? 'Lady Boss' : 'Akaun/Admin'}</div></div><button class="btn ghost" onclick="logout()">Log keluar</button></div>` + (p.role !== 'boss' ? `<button class="btn ghost" style="margin-top:8px" onclick="S.view='me';S.tab='a';render()">Cuti saya</button>` : '');
-  const tabs = p.role === 'hr' ? tb('i', 'Peti masuk') + tb('b', 'Baki pasukan') + tb('t', 'Takwim') + tb('u', 'Audit') : p.role === 'acc' ? tb('b', 'Baki pasukan') + tb('r', 'Permohonan') + tb('t', 'Takwim') + tb('u', 'Audit') : tb('k', 'Kelulusan') + tb('t', 'Takwim') + tb('u', 'Audit');
-  return top + `<div class="tabs">${tabs}</div>` + (S.tab === 'b' ? teamView() : S.tab === 't' ? takwimView() : S.tab === 'u' ? auditView() : S.tab === 'r' ? '<div class="mut">Baca sahaja.</div>' + S.all.rq.map(r => wreq(r)).join('') : S.tab === 'i' ? hrInbox() : bossView());
-}
-const spl = r => S.all.al.filter(a => a.request_id === r.id).map(a => a.days + ' ' + a.ltype).join(' + ');
-function wreq(r, x = '') {
-  const sp = spl(r);
-  return `<div class="card"><div class="row"><div><b>${esc(nm(r.user_id))}</b><br>${r.ltype} · ${fmt(r.start_date)} – ${fmt(r.end_date)} · <b>${r.days} hari${hf(r)}</b></div>${tag(r.status)}</div><div class="mut">${esc(r.reason)}${sp ? ' · Pecahan: ' + sp : ''}</div>${r.attachment_path && S.p.role !== 'acc' ? `<button class="btn ghost" style="margin-top:8px" data-p="${esc(r.attachment_path)}" onclick="openAtt(this.dataset.p)">Buka lampiran</button>` : ''}${r.reject_reason ? `<div class="note e">Sebab ditolak: ${esc(r.reject_reason)}</div>` : ''}${r.cancel_reason ? `<div class="note w">Dibatalkan: ${esc(r.cancel_reason)}</div>` : ''}${cbtn(r)}${x}</div>`;
-}
-async function openAtt(path) { const { data, error } = await SB.storage.from('mc-attachments').createSignedUrl(path, 60); if (error) return toast(error.message); window.open(data.signedUrl, '_blank'); }
-function sug(r) { const e = Math.min(r.days, Math.max(0, balOf(r.user_id, 'EL'))); return r.ltype === 'EL' ? {EL:e, AL:r.days - e} : {[r.ltype]:+r.days}; }
-function hrInbox() {
-  const q = S.all.rq.filter(r => r.status === 'hr' && r.user_id !== S.p.id);
-  return `<h2 style="margin-top:0">Menunggu semakan (${q.length})</h2>` + (q.length ? q.map(r => { const s = sug(r);
-    return wreq(r, `<div class="grid" style="grid-template-columns:repeat(4,1fr)">${Object.keys(T).map(k => `<div><label>${k} <span class="mut">(${balOf(r.user_id, k)})</span></label><input type="number" min="0" step="0.5" id="sp${r.id}${k}" value="${s[k] || 0}" oninput="chk(${r.id})"></div>`).join('')}</div><div id="sw${r.id}"></div><button class="btn" id="sb${r.id}" onclick="toBoss(${r.id})">Hantar kepada Lady Boss</button>`); }).join('') : '<div class="empty">Tiada permohonan menunggu.</div>');
-}
-function split(id) { const o = {}; Object.keys(T).forEach(k => { const v = +$('sp' + id + k).value || 0; if (v > 0) o[k] = v; }); return o; }
-function chk(id) {
-  const r = S.all.rq.find(x => x.id === id), o = split(id), s = Object.values(o).reduce((a, b) => a + b, 0); let m = '';
-  Object.entries(o).forEach(([k, v]) => { if (v > balOf(r.user_id, k)) m += 'Baki ' + k + ' tidak cukup. '; });
-  if (s !== +r.days) m += 'Jumlah mesti ' + r.days + ' hari (kini ' + s + ').';
-  $('sw' + id).innerHTML = m ? `<div class="note e">${m}</div>` : ''; $('sb' + id).disabled = !!m;
-}
-async function toBoss(id) { const { error } = await SB.rpc('hr_send_to_boss', {p_id:id, p_alloc:split(id)}); if (error) return toast(error.message); toast('Dihantar kepada Lady Boss'); await load(); }
-function bossView() {
-  const q = S.all.rq.filter(r => r.status === 'boss'), d = S.all.rq.filter(r => r.status === 'approved' || r.status === 'rejected').slice(0, 10);
-  return `<h2 style="margin-top:0">Untuk kelulusan (${q.length})</h2>` + (q.length ? q.map(r => wreq(r, `<label>Sebab (wajib jika tolak)</label><input id="rj${r.id}"><div class="row" style="justify-content:flex-start"><button class="btn" onclick="decide(${r.id},true)">Luluskan</button><button class="btn" style="background:var(--bad);color:var(--bad-i)" onclick="decide(${r.id},false)">Tolak</button></div>`)).join('') : '<div class="empty">Tiada permohonan menunggu.</div>') + '<h2>Keputusan terkini</h2>' + d.map(r => wreq(r)).join('');
-}
-async function decide(id, ok) { const { error } = await SB.rpc('boss_decide', {p_id:id, p_approve:ok, p_reason:$('rj' + id).value.trim() || null}); if (error) return toast(error.message); toast(ok ? 'Diluluskan' : 'Ditolak'); await load(); }
-function teamView() {
-  if (S.sel) return detail(S.all.pf.find(x => x.id === S.sel));
-  return '<div class="mut">Tekan nama untuk butiran.</div>' + S.all.pf.filter(u => u.role !== 'boss').map(u => `<div class="card" style="cursor:pointer" onclick="S.sel='${u.id}';render()"><div class="row"><div><b>${esc(u.full_name)}</b><br><span class="mut">${esc(u.employee_id)} · ${esc(u.department || '')}</span></div><div class="mut">${Object.keys(T).map(k => k + ' ' + balOf(u.id, k)).join(' · ')}</div></div></div>`).join('');
-}
-function detail(u) {
-  const bo = (k) => S.all.bal.find(x => x.user_id === u.id && x.ltype === k), f = (k, c, l) => `<div><label>${l}</label><input type="number" step="0.5" id="en${k}${c}" value="${(bo(k) || {})[c] || 0}"></div>`;
-  const al = bo('AL');
-  return `<button class="btn ghost" onclick="S.sel=null;render()">Kembali</button><h2>${esc(u.full_name)} <span class="mut">${esc(u.employee_id)}</span></h2><div class="grid">${Object.keys(T).map(k => `<div class="card bal"><span>${T[k]}</span><b>${k} ${balOf(u.id, k)}/${tot(bo(k))}</b></div>`).join('')}</div>` +
-    (al ? `<div class="mut">AL: asas ${al.base} + B/F ${al.bf} + anugerah ${al.award} + ganti ${al.swap} − guna ${al.used}</div>` : '') +
-    (S.p.role === 'hr' ? `<div class="card"><b>Entitlement ${today().slice(0, 4)} (HR sahaja)</b>${u.id === S.p.id ? '<div class="note w">Ini akaun anda sendiri. Perubahan ditanda dalam audit.</div>' : ''}<h2 style="margin:10px 0 0">AL</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${f('AL', 'base', 'Asas')}${f('AL', 'bf', 'B/F (maks 10)')}${f('AL', 'award', 'Anugerah +/-')}${f('AL', 'swap', 'Ganti')}</div><div class="grid" style="grid-template-columns:repeat(3,1fr)">${['MC', 'EL', 'UP'].map(k => f(k, 'base', k + ' asas')).join('')}</div><label>Sebab (wajib)</label><input id="enr"><button class="btn" onclick="saveEnt('${u.id}')">Simpan entitlement</button></div>` : '') +
-    '<h2>Sejarah</h2>' + (S.all.rq.filter(r => r.user_id === u.id).map(r => wreq(r)).join('') || '<div class="empty">Tiada rekod.</div>');
-}
-async function saveEnt(uid) {
-  const why = $('enr').value.trim(); if (!why) return toast('Sebab wajib diisi');
-  const y = +today().slice(0, 4), cs = ['base', 'bf', 'award', 'swap'];
-  for (const k of Object.keys(T)) {
-    const o = S.all.bal.find(x => x.user_id === uid && x.ltype === k) || {base:0, bf:0, award:0, swap:0};
-    const n = {}; cs.forEach(c => n[c] = $('en' + k + c) ? +$('en' + k + c).value || 0 : 0);
-    if (cs.every(c => +o[c] === n[c])) continue;
-    const { error } = await SB.rpc('hr_set_entitlement', {p_user:uid, p_year:y, p_type:k, p_base:n.base, p_bf:n.bf, p_award:n.award, p_swap:n.swap, p_reason:why});
-    if (error) return toast(k + ': ' + error.message);
-  }
-  toast('Entitlement dikemas kini'); await load();
-}
-
-/* ===== Takwim dan Audit ===== */
-function mon(n) { const [y, m] = S.cm.split('-').map(Number); S.cm = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7); S.day = null; render(); }
-function takwimView() {
-  const canEdit = S.p.role === 'hr' && S.view === 'w';
-  const [y, m] = S.cm.split('-').map(Number), f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), dn = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  let c = ''; for (let i = 0; i < f; i++) c += '<span></span>';
-  for (let d = 1; d <= dn; d++) { const k = S.cm + '-' + String(d).padStart(2, '0'), w = isWork(k);
-    c += `<button onclick="S.day='${k}';render()" style="padding:8px 0;border-radius:8px;border:${S.day === k ? '2px solid var(--acc)' : '1px solid var(--line)'};font:inherit;cursor:pointer;background:${w ? 'var(--soft)' : 'var(--bad)'};color:${w ? 'var(--acc)' : 'var(--bad-i)'}">${d}${S.cn[k] ? '*' : ''}</button>`; }
-  const ov = Object.keys(S.cal).filter(k => k.startsWith(S.cm)).sort();
-  return `<div class="row" style="align-items:center"><button class="btn ghost" onclick="mon(-1)">Sebelum</button><b>${String(m).padStart(2, '0')}/${y}</b><button class="btn ghost" onclick="mon(1)">Seterusnya</button></div>
-  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;text-align:center" class="mut">${['Ahd', 'Isn', 'Sel', 'Rab', 'Kha', 'Jum', 'Sab'].map(x => '<span>' + x + '</span>').join('')}${c}</div>
-  <div class="mut" style="margin-top:8px">Hijau = operasi, merah = tidak operasi. Lalai: Jumaat tidak operasi. Bertanda * = ada nota. ${canEdit ? 'Tekan tarikh untuk ubah.' : 'Tekan tarikh untuk lihat nota.'}</div>` +
-  (S.day && !canEdit ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><div style="margin-top:6px">${esc(S.cn[S.day] || 'Tiada nota untuk tarikh ini.')}</div></div>` : S.day ? `<div class="card" style="margin-top:10px"><b>${fmt(S.day)}</b> <span class="mut">sekarang: ${isWork(S.day) ? 'operasi' : 'tidak operasi'}</span><label>Nota (contoh: nama cuti umum)</label><input id="tn" value="${esc(S.cn[S.day] || '')}"><div class="row" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn" onclick="setDay('off')">Tidak operasi</button><button class="btn" onclick="setDay('op')">Operasi</button><button class="btn ghost" style="margin-top:10px" onclick="setDay(null)">Ikut lalai</button></div></div>` : '') +
-  (canEdit ? `<div class="card"><b>Tambah julat tarikh</b><div class="mut">Untuk cuti perayaan atau kilang tutup beberapa hari sekali gus.</div><div class="grid"><div><label>Dari</label><input type="date" id="rf"></div><div><label>Hingga</label><input type="date" id="rt"></div></div><label>Status</label><select id="rs"><option value="off">Tidak operasi</option><option value="op">Operasi</option><option value="">Ikut lalai (padam pengecualian)</option></select><label>Nota</label><input id="rn" placeholder="contoh: Cuti Hari Raya Aidilfitri"><button class="btn" onclick="setRange()">Simpan julat</button></div>` : '') + '<h2>Pengecualian bulan ini</h2>' + (ov.length ? ov.map(k => `<div class="card row"><span>${fmt(k)} · ${S.cal[k] === 'op' ? 'Operasi' : 'Tidak operasi'}</span><span class="mut">${esc(S.cn[k] || '')}</span></div>`).join('') : '<div class="empty">Tiada pengecualian.</div>');
-}
-async function setDay(st) {
-  const { data, error } = await SB.rpc('set_calendar_day', {p_day:S.day, p_status:st, p_note:$('tn').value.trim() || null});
-  if (error) return toast(error.message);
-  toast(data > 0 ? data + ' permohonan terjejas, semak semula' : 'Takwim dikemas kini'); await load();
-}
-async function setRange() {
-  const f = $('rf').value, t = $('rt').value, st = $('rs').value || null, note = $('rn').value.trim() || null;
-  if (!f || !t) return toast('Pilih tarikh dari dan hingga');
-  if (t < f) return toast('Tarikh hingga mesti selepas tarikh dari');
-  const n = Math.round((new Date(t) - new Date(f)) / 864e5) + 1;
-  if (n > 63) return toast('Maksimum 63 hari sekali gus');
-  if (!confirm('Tetapkan ' + n + ' hari (' + fmt(f) + ' hingga ' + fmt(t) + ') sebagai ' + (st === 'off' ? 'tidak operasi' : st === 'op' ? 'operasi' : 'ikut lalai') + '?')) return;
-  const { data, error } = await SB.rpc('set_calendar_range', {p_from:f, p_to:t, p_status:st, p_note:note});
-  if (error) return toast(error.message);
-  S.cm = f.slice(0, 7); S.day = null;
-  toast(data > 0 ? data + ' permohonan terjejas, semak semula' : 'Julat dikemas kini'); await load();
-}
-function cbtn(r) {
-  const p = S.p, mine = r.user_id === p.id;
-  if (p.role === 'staf' || S.view === 'me') {
-    if (!mine) return '';
-    if (r.status === 'hr' || r.status === 'boss') return `<button class="btn ghost" style="margin-top:8px" onclick="cancelReq(${r.id})">Batal permohonan</button>`;
-    if (r.status === 'approved' && r.start_date > today()) return `<div class="mut" style="margin-top:6px">Untuk batal, hubungi ${p.role === 'hr' ? 'Lady Boss' : 'HR'}.</div>`;
-    return '';
-  }
-  if ((p.role === 'hr' || p.role === 'boss') && !mine && r.status === 'approved' && r.start_date > today())
-    return `<label>Sebab pembatalan (wajib)</label><input id="cr${r.id}"><button class="btn ghost" style="margin-top:8px" onclick="cancelAdmin(${r.id})">Batal cuti diluluskan</button>`;
-  return '';
-}
-async function cancelReq(id) {
-  if (!confirm('Batalkan permohonan ini?')) return;
-  const { error } = await SB.rpc('cancel_leave', {p_id:id, p_reason:null});
-  if (error) return toast(error.message);
-  toast('Permohonan dibatalkan'); await load();
-}
-async function cancelAdmin(id) {
-  const why = $('cr' + id).value.trim(); if (!why) return toast('Sebab pembatalan wajib');
-  if (!confirm('Batalkan cuti yang telah diluluskan ini? Baki akan dipulangkan.')) return;
-  const { error } = await SB.rpc('cancel_leave', {p_id:id, p_reason:why});
-  if (error) return toast(error.message);
-  toast('Cuti dibatalkan, baki dipulangkan'); await load();
-}
-const ACT = {batal:'Batal', hantar_permohonan:'Hantar permohonan', hr_hantar_kepada_boss:'HR hantar kepada Lady Boss', lulus:'Lulus', tolak:'Tolak', ubah_entitlement:'Ubah entitlement', ubah_takwim:'Ubah takwim'};
-function auText(a) {
-  const d = a.detail || {};
-  if (a.action === 'ubah_entitlement') { const o = d.sebelum || {}, n = d.selepas || {};
-    return nm(d.staf) + ' · ' + d.jenis + ' ' + d.tahun + ': asas ' + (o.base ?? 0) + '→' + n.base + ', B/F ' + (o.bf ?? 0) + '→' + n.bf + ', anugerah ' + (o.award ?? 0) + '→' + n.award + ', ganti ' + (o.swap ?? 0) + '→' + n.swap + '. Sebab: ' + d.sebab + (d.akaun_sendiri ? ' [AKAUN SENDIRI]' : ''); }
-  if (a.action === 'ubah_takwim') return (d.dari ? fmt(d.dari) + ' hingga ' + fmt(d.hingga) : fmt(d.tarikh)) + ' → ' + (d.status === 'op' ? 'operasi' : d.status === 'off' ? 'tidak operasi' : 'lalai') + (d.terjejas ? ' (' + d.terjejas + ' permohonan terjejas)' : '');
-  if (a.action === 'hr_hantar_kepada_boss') return 'Permohonan #' + d.request + ' · ' + Object.entries(d.pecahan || {}).map(([k, v]) => v + ' ' + k).join(' + ');
-  return 'Permohonan #' + d.request + (d.terus_ke_boss ? ' (terus ke Lady Boss)' : '') + (d.sebab ? '. Sebab: ' + d.sebab : '');
-}
-function auditView() {
-  return S.all.au.length ? S.all.au.map(a => `<div class="card"><div class="row"><b>${esc(nm(a.actor))}</b><span class="mut">${new Date(a.at).toLocaleString('ms-MY', {timeZone:'Asia/Kuala_Lumpur', dateStyle:'short', timeStyle:'short'})}</span></div><span class="tag">${esc(ACT[a.action] || a.action)}</span><div class="mut" style="margin-top:6px">${esc(auText(a))}</div></div>`).join('') : '<div class="empty">Belum ada tindakan direkod.</div>';
-}
-
-function calc() {
-  const t0 = $('ft').value, al = t0 !== 'MC'; $('hw').style.display = al ? '' : 'none'; if (!al) $('fh').value = ''; const half = $('fh').value; $('fe').disabled = !!half; if (half) $('fe').value = $('fs').value;
-  const t = $('ft').value, s = $('fs').value, e = $('fe').value, f = $('ff').files[0];
-  const okFile = !!f && /^(application\/pdf|image\/(jpeg|png))$/.test(f.type) && f.size <= 5e6;
-  $('fl').textContent = t === 'MC' ? 'Lampiran MC (wajib)' : 'Lampiran sokongan (pilihan)';
-  let h = '', ok = true;
-  if (!s || !e) ok = false;
-  else if (e < s) { ok = false; h += '<div class="note e">Tarikh tamat mesti selepas atau sama dengan tarikh mula.</div>'; }
-  else { const d = half ? cnt(s, e) / 2 : cnt(s, e); if (!d) { ok = false; h += '<div class="note e">Semua tarikh dipilih adalah hari tidak operasi.</div>'; } else h += `<div class="note o">Jumlah dikira: <b>${d} hari bekerja</b></div>`; }
-  if (f && !okFile) { ok = false; h += '<div class="note e">Fail mesti PDF, JPG atau PNG, maksimum 5MB.</div>'; }
-  if (t === 'MC' && !f) { ok = false; h += '<div class="note w">Lampirkan dokumen MC.</div>'; }
-  if (ok && !$('fw').value.trim()) { ok = false; h += '<div class="note w">Tulis sebab ringkas.</div>'; }
-  $('prev').innerHTML = h + (S.cmsg ? `<div class="note e">${esc(S.cmsg)}</div>` : ''); $('sub').disabled = !ok;
-}
-async function submitReq() {
-  $('sub').disabled = true; S.cmsg = '';
-  const f = $('ff').files[0]; let path = null;
-  const fail = m => { S.cmsg = m; calc(); };
-  if (f) {
-    path = S.p.id + '/' + Date.now() + '-' + f.name.replace(/[^\w.\-]/g, '_');
-    const u = await SB.storage.from('mc-attachments').upload(path, f);
-    if (u.error) return fail('Gagal muat naik lampiran: ' + u.error.message);
-  }
-  const { error } = await SB.rpc('submit_leave', {p_type:$('ft').value, p_start:$('fs').value, p_end:$('fe').value, p_reason:$('fw').value.trim(), p_att:path, p_half:$('fh').value || null});
-  if (error) return fail(error.message);
-  toast('Permohonan dihantar'); S.tab = 'h'; await load();
-}
-
-function render() { $('app').innerHTML = S.scr === 'setpw' ? setPwView() : S.scr === 'app' ? appView() : loginView(); if (S.scr === 'app' && S.tab === 'm') calc(); if (S.scr === 'app' && S.p.role === 'hr' && S.view === 'w' && S.tab === 'i') S.all.rq.filter(r => r.status === 'hr' && r.user_id !== S.p.id).forEach(r => chk(r.id)); }
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')acts.login()});
+const upd=()=>{$('#off').hidden=navigator.onLine};addEventListener('online',upd);addEventListener('offline',upd);upd();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+boot();
 </script>
 </body>
 </html>
